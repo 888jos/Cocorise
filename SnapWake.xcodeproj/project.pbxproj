@@ -6,6 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		8077FD732F6C3EBC00E17331 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 8077FD722F6C3EBC00E17331 /* Lottie */; };
+		80CC95102F717E01003BF26F /* ReceiptParser in Frameworks */ = {isa = PBXBuildFile; productRef = 80CC950F2F717E01003BF26F /* ReceiptParser */; };
+		80CC95122F717E01003BF26F /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 80CC95112F717E01003BF26F /* RevenueCat */; };
+		80CC95142F717E01003BF26F /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 80CC95132F717E01003BF26F /* RevenueCatUI */; };
+		80CC95162F717E01003BF26F /* RevenueCat_CustomEntitlementComputation in Frameworks */ = {isa = PBXBuildFile; productRef = 80CC95152F717E01003BF26F /* RevenueCat_CustomEntitlementComputation */; };
+		80EECB4D2F5CCBE6008A8089 /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = 80EECB4C2F5CCBE6008A8089 /* FirebaseAI */; };
+		80EECB4F2F5CCBE6008A8089 /* FirebaseAILogic in Frameworks */ = {isa = PBXBuildFile; productRef = 80EECB4E2F5CCBE6008A8089 /* FirebaseAILogic */; };
+		80EECB512F5CCBE6008A8089 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 80EECB502F5CCBE6008A8089 /* FirebaseAnalytics */; };
+		80EECB532F5CCBE6008A8089 /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = 80EECB522F5CCBE6008A8089 /* FirebaseAnalyticsCore */; };
+		80EECB552F5CCBE6008A8089 /* FirebaseAnalyticsIdentitySupport in Frameworks */ = {isa = PBXBuildFile; productRef = 80EECB542F5CCBE6008A8089 /* FirebaseAnalyticsIdentitySupport */; };
+		80EECB5E2F5CCD80008A8089 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 80EECB5D2F5CCD80008A8089 /* FirebaseAuth */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		80EECADA2F5C3F59008A8089 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +66,17 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				80EECB4F2F5CCBE6008A8089 /* FirebaseAILogic in Frameworks */,
+				8077FD732F6C3EBC00E17331 /* Lottie in Frameworks */,
+				80EECB5E2F5CCD80008A8089 /* FirebaseAuth in Frameworks */,
+				80EECB552F5CCBE6008A8089 /* FirebaseAnalyticsIdentitySupport in Frameworks */,
+				80EECB4D2F5CCBE6008A8089 /* FirebaseAI in Frameworks */,
+				80CC95122F717E01003BF26F /* RevenueCat in Frameworks */,
+				80EECB512F5CCBE6008A8089 /* FirebaseAnalytics in Frameworks */,
+				80CC95102F717E01003BF26F /* ReceiptParser in Frameworks */,
+				80CC95142F717E01003BF26F /* RevenueCatUI in Frameworks */,
+				80CC95162F717E01003BF26F /* RevenueCat_CustomEntitlementComputation in Frameworks */,
+				80EECB532F5CCBE6008A8089 /* FirebaseAnalyticsCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +103,7 @@
 				80EECACE2F5C3F59008A8089 /* SnapWake */,
 				80EECADC2F5C3F59008A8089 /* SnapWakeTests */,
 				80EECAE62F5C3F59008A8089 /* SnapWakeUITests */,
+				80EECB5C2F5CCD80008A8089 /* Frameworks */,
 				80EECACD2F5C3F59008A8089 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -90,6 +116,13 @@
 				80EECAE32F5C3F59008A8089 /* SnapWakeUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		80EECB5C2F5CCD80008A8089 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -112,6 +145,17 @@
 			);
 			name = SnapWake;
 			packageProductDependencies = (
+				80EECB4C2F5CCBE6008A8089 /* FirebaseAI */,
+				80EECB4E2F5CCBE6008A8089 /* FirebaseAILogic */,
+				80EECB502F5CCBE6008A8089 /* FirebaseAnalytics */,
+				80EECB522F5CCBE6008A8089 /* FirebaseAnalyticsCore */,
+				80EECB542F5CCBE6008A8089 /* FirebaseAnalyticsIdentitySupport */,
+				80EECB5D2F5CCD80008A8089 /* FirebaseAuth */,
+				8077FD722F6C3EBC00E17331 /* Lottie */,
+				80CC950F2F717E01003BF26F /* ReceiptParser */,
+				80CC95112F717E01003BF26F /* RevenueCat */,
+				80CC95132F717E01003BF26F /* RevenueCatUI */,
+				80CC95152F717E01003BF26F /* RevenueCat_CustomEntitlementComputation */,
 			);
 			productName = SnapWake;
 			productReference = 80EECACC2F5C3F59008A8089 /* SnapWake.app */;
@@ -195,6 +239,11 @@
 			);
 			mainGroup = 80EECAC32F5C3F59008A8089;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				80EECB4B2F5CCBE6008A8089 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				8077FD712F6C3EBC00E17331 /* XCRemoteSwiftPackageReference "lottie-ios" */,
+				80CC950E2F717E01003BF26F /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 80EECACD2F5C3F59008A8089 /* Products */;
 			projectDirPath = "";
@@ -400,8 +449,14 @@
 				DEVELOPMENT_TEAM = RSC662VDU8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleIconName = AppIcon;
+				INFOPLIST_KEY_NSCameraUsageDescription = "SnapWake needs access to your camera to verify mission completion (photo missions like Sky Photo, Make Bed, Object Hunt).";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "SnapWake needs microphone access to record your affirmations and Bible verses.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "SnapWake needs access to motion sensors to detect phone shaking for the Shake Phone mission.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "SnapWake uses speech recognition to verify you read your affirmations and Bible verses out loud.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UIBackgroundModes = audio;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -410,11 +465,15 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.wrap.SnapWake;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wrap.cocorise;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -428,8 +487,14 @@
 				DEVELOPMENT_TEAM = RSC662VDU8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleIconName = AppIcon;
+				INFOPLIST_KEY_NSCameraUsageDescription = "SnapWake needs access to your camera to verify mission completion (photo missions like Sky Photo, Make Bed, Object Hunt).";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "SnapWake needs microphone access to record your affirmations and Bible verses.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "SnapWake needs access to motion sensors to detect phone shaking for the Shake Phone mission.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "SnapWake uses speech recognition to verify you read your affirmations and Bible verses out loud.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UIBackgroundModes = audio;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -438,11 +503,15 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.wrap.SnapWake;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wrap.cocorise;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -558,6 +627,91 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		8077FD712F6C3EBC00E17331 /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.6.0;
+			};
+		};
+		80CC950E2F717E01003BF26F /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.66.0;
+			};
+		};
+		80EECB4B2F5CCBE6008A8089 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.10.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		8077FD722F6C3EBC00E17331 /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8077FD712F6C3EBC00E17331 /* XCRemoteSwiftPackageReference "lottie-ios" */;
+			productName = Lottie;
+		};
+		80CC950F2F717E01003BF26F /* ReceiptParser */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 80CC950E2F717E01003BF26F /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = ReceiptParser;
+		};
+		80CC95112F717E01003BF26F /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 80CC950E2F717E01003BF26F /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+		80CC95132F717E01003BF26F /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 80CC950E2F717E01003BF26F /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
+		};
+		80CC95152F717E01003BF26F /* RevenueCat_CustomEntitlementComputation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 80CC950E2F717E01003BF26F /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat_CustomEntitlementComputation;
+		};
+		80EECB4C2F5CCBE6008A8089 /* FirebaseAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 80EECB4B2F5CCBE6008A8089 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAI;
+		};
+		80EECB4E2F5CCBE6008A8089 /* FirebaseAILogic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 80EECB4B2F5CCBE6008A8089 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAILogic;
+		};
+		80EECB502F5CCBE6008A8089 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 80EECB4B2F5CCBE6008A8089 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		80EECB522F5CCBE6008A8089 /* FirebaseAnalyticsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 80EECB4B2F5CCBE6008A8089 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsCore;
+		};
+		80EECB542F5CCBE6008A8089 /* FirebaseAnalyticsIdentitySupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 80EECB4B2F5CCBE6008A8089 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsIdentitySupport;
+		};
+		80EECB5D2F5CCD80008A8089 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 80EECB4B2F5CCBE6008A8089 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 80EECAC42F5C3F59008A8089 /* Project object */;
 }

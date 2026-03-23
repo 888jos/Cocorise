@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout 180 xcodebuild -project SnapWake.xcodeproj -scheme SnapWake -destination 'platform=iOS Simulator,name=iPhone 16' build)",
+      "Bash(plutil -p SnapWake/Info.plist)",
+      "Bash(/usr/libexec/PlistBuddy -c \"Set :objects:80EECAEE2F5C3F59008A8089:buildSettings:INFOPLIST_KEY_CFBundleIconName AppIcon\" SnapWake.xcodeproj/project.pbxproj)",
+      "Bash(/usr/libexec/PlistBuddy -c \"Add :objects:80EECAEE2F5C3F59008A8089:buildSettings:INFOPLIST_KEY_CFBundleIconName string AppIcon\" SnapWake.xcodeproj/project.pbxproj)",
+      "Bash(/usr/libexec/PlistBuddy -c \"Add :objects:80EECAEF2F5C3F59008A8089:buildSettings:INFOPLIST_KEY_CFBundleIconName string AppIcon\" SnapWake.xcodeproj/project.pbxproj)",
+      "Read(//Users/jos/Downloads/**)",
+      "Bash(timeout 180 xcodebuild -project SnapWake.xcodeproj -scheme SnapWake -destination 'platform=iOS Simulator,name=iPhone 16' clean build)",
+      "Bash(find /Users/jos/SnapWake/SnapWake/Views -name \"*.swift\" -exec grep -l \"^struct SettingsView\" {} ;)",
+      "Read(//tmp/**)",
+      "Bash(xcodebuild -resolvePackageDependencies -project SnapWake.xcodeproj -scheme SnapWake)",
+      "Bash(find /Users/jos/SnapWake/SnapWake/Views -name \"*.swift\" -exec grep -l \"Time Taken\\|timeTaken\" {} ;)",
+      "Bash(swift package --package-path . show-dependencies)",
+      "Bash(git remote add origin git@github.com:888jos/Cocorise.git)",
+      "Bash(git add .)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,1625 @@
+//
+//  OnboardingV2View.swift
+//  SnapWake
+//
+//  Chat-style onboarding with Coco mascot
+//
+
+import SwiftUI
+
+struct OnboardingV2View: View {
+    @Environment(\.colorScheme) var colorScheme
+    @StateObject private var alarmManager = AlarmManager.shared
+    @Binding var isComplete: Bool
+
+    @State private var messages: [ChatMessage] = []
+    @State private var currentMessageIndex = 0
+    @State private var userName = ""
+    @State private var showingInput = false
+    @State private var currentInput = ""
+    @State private var showTypingIndicator = false
+    @State private var userAge = ""
+    @State private var selectedSnoozeTime = ""
+    @State private var guiltyFeeling = ""
+    @State private var currentWakeTime: Date = {
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        components.hour = 7
+        components.minute = 30
+        return Calendar.current.date(from: components) ?? Date()
+    }()
+    @State private var panicFeeling = ""
+    @State private var alarmsCount = ""
+    @State private var forgetTurnOff = ""
+    @State private var selfThought = ""
+    @State private var triesCount = ""
+    @State private var dreamActivity = ""
+    @State private var lifeDifference = ""
+    @State private var biggestDream = ""
+    @State private var futureFeeling = ""
+    @State private var selectedMission = ""
+    @State private var desiredWakeTime: Date = {
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        components.hour = 7
+        components.minute = 30
+        return Calendar.current.date(from: components) ?? Date()
+    }()
+    @State private var selectedSound = "Default"
+    @State private var selectedDays: Set<String> = []
+    @State private var heardAboutUs = ""
+    @State private var commitment = ""
+    @State private var transitionToV1 = false
+
+    let conversationFlow: [ConversationStep] = [
+        // Intro
+        .cocoMessage("Hey! 👋", mascot: "mascot_bienvenue"),
+        .cocoMessage("I'm Coco, your morning coach!", mascot: "mascot_bienvenue"),
+        .cocoMessage("I'm here to help you become a morning person ☀️", mascot: "mascot_guide"),
+
+        // Name & Age
+        .cocoMessage("What's your first name?", mascot: "mascot_guide"),
+        .userInput(.name),
+        .cocoMessage("Nice to meet you, {name}! 🎉", mascot: "mascot_victoire"),
+        .cocoMessage("How old are you?", mascot: "mascot_guide"),
+        .userChoice(.age, options: ["Under 18", "18-24", "25-34", "35-44", "45+"]),
+
+        // Snooze habits
+        .cocoMessage("Let me ask you something...", mascot: "mascot_guide"),
+        .cocoMessage("How long do you spend hitting snooze each morning?", mascot: "mascot_triste"),
+        .userChoice(.snoozeTime, options: ["Under 10 min", "10-20 min", "20-30 min", "30-45 min", "Over 45 min"]),
+
+        // Guilty feeling
+        .cocoMessage("I see... 🤔", mascot: "mascot_guide"),
+        .cocoMessage("Do you often feel guilty about not waking up at the first alarm?", mascot: "mascot_triste"),
+        .userChoice(.guiltyFeeling, options: ["Yes, every day", "Several times", "Sometimes", "Rarely"]),
+
+        // Current wake time
+        .cocoMessage("What time do you actually wake up right now?", mascot: "mascot_guide"),
+        .cocoMessage("Be honest, we're here to help you 💙", mascot: "mascot_encouragement"),
+        .userTimePicker(.currentWakeTime),
+
+        // Reassurance
+        .cocoMessage("Thanks for being honest! 🙏", mascot: "mascot_encouragement"),
+        .cocoMessage("You're not alone. Thousands struggle with this.", mascot: "mascot_guide"),
+
+        // Panic feeling
+        .cocoMessage("How do you feel when you wake up in panic and late?", mascot: "mascot_triste"),
+        .userChoice(.panicFeeling, options: ["Stressed", "Angry", "Discouraged", "It ruins my day"]),
+
+        // Pain amplification
+        .cocoMessage("I understand... 😔", mascot: "mascot_triste"),
+        .cocoMessage("Did you know? 30 min of snooze daily = 182 hours lost per year!", mascot: "mascot_challenge"),
+        .cocoMessage("That's time you could be using for yourself!", mascot: "mascot_encouragement"),
+
+        // Alarms count
+        .cocoMessage("How many alarms do you have currently set?", mascot: "mascot_guide"),
+        .userChoice(.alarmsCount, options: ["Only one", "2-3", "4-6", "More than 7", "I don't know anymore"]),
+
+        // Forget turn off
+        .cocoMessage("Do you ever turn off the alarm and fall back asleep without remembering?", mascot: "mascot_triste"),
+        .userChoice(.forgetTurnOff, options: ["Yes, often", "Sometimes", "Rarely", "Never"]),
+
+        // Self thought
+        .cocoMessage("What do you think about yourself when you miss your wake-up?", mascot: "mascot_triste"),
+        .userChoice(.selfThought, options: ["I lack discipline", "I'm weak", "I disappoint others", "I can't count on myself"]),
+
+        // Empathy
+        .cocoMessage("Hey, listen... 🫂", mascot: "mascot_encouragement"),
+        .cocoMessage("It's not about willpower. Your brain needs 15-30 minutes to fully wake up.", mascot: "mascot_guide"),
+        .cocoMessage("That's why you need a system, not just motivation!", mascot: "mascot_challenge"),
+
+        // Tries count
+        .cocoMessage("How many times have you tried to change your wake-up habits without success?", mascot: "mascot_guide"),
+        .userChoice(.triesCount, options: ["Never", "1-2 times", "3-5 times", "Too many times", "I've tried everything"]),
+
+        // Dream transformation
+        .cocoMessage("Imagine... ✨", mascot: "mascot_victoire"),
+        .cocoMessage("What could you do with 30 more minutes every morning?", mascot: "mascot_guide"),
+        .userChoice(.dreamActivity, options: ["Exercise", "Have a real breakfast", "Meditate or practice yoga", "Work on my projects", "Spend time with loved ones"]),
+
+        // Life difference
+        .cocoMessage("If you woke up on time every morning, how would your life be different in 3 months?", mascot: "mascot_challenge"),
+        .userChoice(.lifeDifference, options: ["More productive at work", "Better physical health", "Less daily stress", "More time for myself", "Improved relationships"]),
+
+        // Biggest dream
+        .cocoMessage("Now tell me... 💭", mascot: "mascot_guide"),
+        .cocoMessage("What's your biggest dream that you could achieve if you mastered your mornings?", mascot: "mascot_challenge"),
+        .userInput(.dream),
+        // Response is handled by getPersonalizedDreamResponse
+
+        // Future feeling
+        .cocoMessage("Imagine yourself in 6 months, waking up consistently on time...", mascot: "mascot_guide"),
+        .cocoMessage("How would you feel?", mascot: "mascot_victoire"),
+        .userChoice(.futureFeeling, options: ["Proud of myself", "Confident", "Energized", "In control", "Accomplished"]),
+
+        // Success stories
+        .cocoMessage("You know what? 🌟", mascot: "mascot_victoire"),
+        .cocoMessage("Thousands of people just like you have transformed their mornings with Cocorise!", mascot: "mascot_encouragement"),
+
+        // Transition to visual setup
+        .cocoMessage("Now, let's build your personalized wake-up plan! 🎯", mascot: "mascot_challenge"),
+        .cocoMessage("I'll help you set everything up...", mascot: "mascot_guide"),
+
+        .transitionToVisual
+    ]
+
+    var body: some View {
+        ZStack {
+            Color.snapLightBackground
+                .ignoresSafeArea()
+
+            if transitionToV1 {
+                OnboardingV1Wrapper(
+                    isComplete: $isComplete,
+                    userName: userName,
+                    userAge: userAge,
+                    snoozeTime: selectedSnoozeTime,
+                    guiltyFeeling: guiltyFeeling,
+                    panicFeeling: panicFeeling,
+                    dreamActivity: dreamActivity,
+                    alarmsCount: alarmsCount,
+                    forgetTurnOff: forgetTurnOff,
+                    lifeDifference: lifeDifference,
+                    selfThought: selfThought,
+                    triesCount: triesCount,
+                    biggestDream: biggestDream,
+                    commitment: commitment,
+                    futureFeeling: futureFeeling,
+                    currentWakeTime: currentWakeTime,
+                    desiredWakeTime: desiredWakeTime
+                )
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+            } else {
+                chatView
+                    .transition(.move(edge: .leading).combined(with: .opacity))
+            }
+        }
+        .onAppear {
+            startConversation()
+        }
+    }
+
+    var chatView: some View {
+        VStack(spacing: 0) {
+                // Header
+                HStack {
+                    Button(action: { isComplete = true }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.gray)
+                            .padding()
+                    }
+                    Spacer()
+
+                    // Progress indicator - circular ring
+                    ZStack {
+                        Circle()
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 2)
+                            .frame(width: 28, height: 28)
+
+                        Circle()
+                            .trim(from: 0, to: CGFloat(currentMessageIndex) / CGFloat(conversationFlow.count))
+                            .stroke(Color.snapOrange, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                            .frame(width: 28, height: 28)
+                            .rotationEffect(.degrees(-90))
+                            .animation(.easeInOut(duration: 0.3), value: currentMessageIndex)
+                    }
+                    .padding(.trailing, 16)
+                }
+
+                // Chat messages
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            ForEach(messages) { message in
+                                MessageBubble(message: message, userName: userName)
+                                    .id(message.id)
+                            }
+
+                            if showTypingIndicator {
+                                TypingIndicator()
+                                    .id("typing")
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 20)
+                    }
+                    .onChange(of: messages.count) { _ in
+                        withAnimation {
+                            if let lastMessage = messages.last {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
+                        }
+                    }
+                    .onChange(of: showTypingIndicator) { _ in
+                        withAnimation {
+                            proxy.scrollTo("typing", anchor: .bottom)
+                        }
+                    }
+                    .onChange(of: showingInput) { isShowing in
+                        if isShowing {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                withAnimation {
+                                    if let lastMessage = messages.last {
+                                        proxy.scrollTo(lastMessage.id, anchor: .top)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+            // Input area
+            if showingInput {
+                InputArea(
+                    currentStep: conversationFlow[currentMessageIndex],
+                    input: $currentInput,
+                    userName: $userName,
+                    selectedSnoozeTime: $selectedSnoozeTime,
+                    biggestDream: $biggestDream,
+                    commitment: $commitment,
+                    currentWakeTime: $currentWakeTime,
+                    desiredWakeTime: $desiredWakeTime,
+                    selectedDays: $selectedDays,
+                    onSend: handleUserResponse
+                )
+            }
+        }
+    }
+
+    private func startConversation() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            showNextMessage()
+        }
+    }
+
+    private func showNextMessage() {
+        guard currentMessageIndex < conversationFlow.count else { return }
+
+        let step = conversationFlow[currentMessageIndex]
+
+        switch step {
+        case .cocoMessage(let text, let mascot):
+            showTypingIndicator = true
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                showTypingIndicator = false
+                let processedText = text.replacingOccurrences(of: "{name}", with: userName)
+                messages.append(ChatMessage(text: processedText, isFromCoco: true, mascotImage: mascot))
+                currentMessageIndex += 1
+
+                // Auto-continue to next message if it's also from Coco
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                    showNextMessage()
+                }
+            }
+
+        case .userInput(_):
+            showingInput = true
+
+        case .userChoice(_, _):
+            showingInput = true
+
+        case .userMultiChoice(_, _):
+            showingInput = true
+
+        case .userTimePicker(_):
+            showingInput = true
+
+        case .transitionToVisual:
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                    transitionToV1 = true
+                }
+            }
+
+        case .finish:
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                finishOnboarding()
+            }
+        }
+    }
+
+    private func handleUserResponse() {
+        let step = conversationFlow[currentMessageIndex]
+
+        // Allow empty input for time pickers
+        if case .userTimePicker(_) = step {
+            // Process time picker
+        } else {
+            guard !currentInput.isEmpty else { return }
+        }
+
+        var userResponseText = currentInput
+        var personalizedResponse: String? = nil
+
+        switch step {
+        case .userInput(let type):
+            messages.append(ChatMessage(text: currentInput, isFromCoco: false))
+
+            switch type {
+            case .name:
+                userName = currentInput
+                // Response already in flow
+            case .dream:
+                biggestDream = currentInput
+                personalizedResponse = getPersonalizedDreamResponse(currentInput)
+            }
+
+        case .userChoice(let type, _):
+            messages.append(ChatMessage(text: currentInput, isFromCoco: false))
+
+            switch type {
+            case .age:
+                userAge = currentInput
+                personalizedResponse = getAgeResponse(currentInput)
+            case .snoozeTime:
+                selectedSnoozeTime = currentInput
+                personalizedResponse = getSnoozeResponse(currentInput)
+            case .guiltyFeeling:
+                guiltyFeeling = currentInput
+                personalizedResponse = getGuiltyResponse(currentInput)
+            case .panicFeeling:
+                panicFeeling = currentInput
+                personalizedResponse = getPanicResponse(currentInput)
+            case .alarmsCount:
+                alarmsCount = currentInput
+                personalizedResponse = getAlarmsCountResponse(currentInput)
+            case .forgetTurnOff:
+                forgetTurnOff = currentInput
+                personalizedResponse = getForgetResponse(currentInput)
+            case .selfThought:
+                selfThought = currentInput
+                personalizedResponse = getSelfThoughtResponse(currentInput)
+            case .triesCount:
+                triesCount = currentInput
+                personalizedResponse = getTriesResponse(currentInput)
+            case .dreamActivity:
+                dreamActivity = currentInput
+                personalizedResponse = getDreamActivityResponse(currentInput)
+            case .lifeDifference:
+                lifeDifference = currentInput
+                personalizedResponse = getLifeDifferenceResponse(currentInput)
+            case .futureFeeling:
+                futureFeeling = currentInput
+                personalizedResponse = getFutureFeelingResponse(currentInput)
+            case .mission:
+                selectedMission = currentInput
+                personalizedResponse = getMissionResponse(currentInput)
+            case .sound:
+                selectedSound = currentInput
+                personalizedResponse = "Great choice! 🎵"
+            case .heardAboutUs:
+                heardAboutUs = currentInput
+                personalizedResponse = getHeardAboutResponse(currentInput)
+            case .commitment:
+                commitment = currentInput
+                personalizedResponse = getCommitmentResponse(currentInput)
+            case .days:
+                break // Handled in userMultiChoice
+            }
+
+        case .userMultiChoice(let type, _):
+            messages.append(ChatMessage(text: currentInput, isFromCoco: false))
+
+            switch type {
+            case .days:
+                // currentInput contains comma-separated days
+                let days = currentInput.components(separatedBy: ", ")
+                selectedDays = Set(days)
+                personalizedResponse = getDaysResponse(days.count)
+            default:
+                break
+            }
+
+        case .userTimePicker(let type):
+            let formatter = DateFormatter()
+            formatter.timeStyle = .short
+            let timeString = formatter.string(from: type == .currentWakeTime ? currentWakeTime : desiredWakeTime)
+            messages.append(ChatMessage(text: timeString, isFromCoco: false))
+
+            if type == .desiredWakeTime {
+                personalizedResponse = getDesiredWakeTimeResponse(desiredWakeTime)
+            }
+
+        default:
+            break
+        }
+
+        currentInput = ""
+        showingInput = false
+        currentMessageIndex += 1
+
+        // Add personalized response before continuing
+        if let response = personalizedResponse {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.showTypingIndicator = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    self.showTypingIndicator = false
+                    self.messages.append(ChatMessage(text: response, isFromCoco: true, mascotImage: "mascot_guide"))
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        self.showNextMessage()
+                    }
+                }
+            }
+        } else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                showNextMessage()
+            }
+        }
+    }
+
+    // MARK: - Personalized Responses
+
+    private func getAgeResponse(_ age: String) -> String {
+        switch age {
+        case "Under 18": return "Young and ready to build great habits! 💪"
+        case "18-24": return "Perfect age to master your mornings! 🌟"
+        case "25-34": return "Great! You're in the prime time to transform your life 🚀"
+        case "35-44": return "Awesome! It's never too late to change 💫"
+        default: return "Experience + new habits = unstoppable! 🔥"
+        }
+    }
+
+    private func getSnoozeResponse(_ time: String) -> String {
+        if time.contains("Under 10") {
+            return "Not too bad! But imagine having those extra minutes for yourself ⏰"
+        } else if time.contains("10-20") {
+            return "That's about 120 hours per year... time you could invest in yourself! 😮"
+        } else if time.contains("20-30") {
+            return "Wow, that's nearly 180 hours a year! Think what you could achieve with that time 🤯"
+        } else if time.contains("30-45") {
+            return "That's a lot of time lost... but we're going to change that together! 💪"
+        } else {
+            return "I totally get it. But this ends today. You're taking control! 🔥"
+        }
+    }
+
+    private func getGuiltyResponse(_ feeling: String) -> String {
+        if feeling == "Yes, every day" {
+            return "That guilt is actually a sign you want to change. Let's turn it into action! 💪"
+        } else if feeling == "Several times" {
+            return "I hear you. That guilt means you care about yourself 💙"
+        } else {
+            return "Good! Less guilt, more action. Let's make it even better 🌟"
+        }
+    }
+
+    private func getPanicResponse(_ feeling: String) -> String {
+        switch feeling {
+        case "Stressed": return "That stress is draining your energy before the day even starts 😔"
+        case "Angry": return "I understand... waking up rushed ruins everything 😤"
+        case "Discouraged": return "That feeling won't last. We're fixing this together 💙"
+        default: return "Exactly! A bad morning can ruin an entire day. Not anymore! ✨"
+        }
+    }
+
+    private func getAlarmsCountResponse(_ count: String) -> String {
+        if count == "Only one" {
+            return "Impressive! You're already ahead of most people 👏"
+        } else if count == "2-3" {
+            return "Classic strategy... but one powerful alarm is all you'll need 💪"
+        } else if count.contains("4-6") {
+            return "Whoa! That's alarm fatigue. One mission = one wake-up 🎯"
+        } else if count.contains("More than 7") {
+            return "That's alarm chaos! We're simplifying this right now 😅"
+        } else {
+            return "Let's bring some clarity to your mornings! 🌅"
+        }
+    }
+
+    private func getForgetResponse(_ forget: String) -> String {
+        if forget.contains("often") {
+            return "That's autopilot mode. Your brain needs engagement, not just noise 🧠"
+        } else if forget == "Sometimes" {
+            return "That's your brain still half-asleep. A mission will wake it up! 💡"
+        } else {
+            return "Good awareness! A mission will make it even better ⚡"
+        }
+    }
+
+    private func getSelfThoughtResponse(_ thought: String) -> String {
+        return "Listen... that's NOT true. You just haven't had the right system yet 💙"
+    }
+
+    private func getTriesResponse(_ tries: String) -> String {
+        if tries == "Never" {
+            return "Then you're in for a transformation! 🌟"
+        } else if tries.contains("1-2") {
+            return "Third time's the charm! But this time it's different 💪"
+        } else if tries.contains("3-5") {
+            return "I know it's frustrating. But this time you have ME! 🐓"
+        } else if tries.contains("Too many") {
+            return "This is the LAST time you need to try. We got this! 🔥"
+        } else {
+            return "Well, now you have a coach who won't give up on you! 💙"
+        }
+    }
+
+    private func getDreamActivityResponse(_ activity: String) -> String {
+        switch activity {
+        case "Exercise": return "Yes! Morning exercise = energy all day long! 💪"
+        case "Have a real breakfast": return "Breakfast like a champion! Your body will thank you 🥞"
+        case "Meditate or practice yoga": return "Inner peace before the chaos starts. Love it! 🧘"
+        case "Work on my projects": return "That's when creativity peaks! Smart choice 🚀"
+        default: return "Quality time is the best time! Beautiful goal 💙"
+        }
+    }
+
+    private func getLifeDifferenceResponse(_ difference: String) -> String {
+        return "Exactly! That's what we're building together 🎯"
+    }
+
+    private func getPersonalizedDreamResponse(_ dream: String) -> String {
+        if dream == "I prefer not to say" {
+            return "That's okay! Your goals are personal. What matters is you're here, ready to improve! 💙"
+        } else {
+            return "I love that! \(dream) is absolutely possible. Let's make it happen! ✨"
+        }
+    }
+
+    private func getFutureFeelingResponse(_ feeling: String) -> String {
+        return "That feeling? It's closer than you think! 🌟"
+    }
+
+    private func getMissionResponse(_ mission: String) -> String {
+        switch mission {
+        case "Push-ups": return "Beast mode activated! 15 seconds to wake up like a champion 💪"
+        case "Sky Photo": return "Natural light = instant wake-up! Smart choice 📸"
+        case "Make Your Bed": return "First win of the day = momentum! Love it 🛏️"
+        case "Bible Verse": return "Spiritual + physical wake-up. Powerful combo! 🙏"
+        case "Affirmation": return "Positive mindset from second one. Yes! ✨"
+        case "Object Hunt": return "Get moving, brain activated! Perfect 🔍"
+        default: return "Brain challenge first thing! You'll be sharp ⚡"
+        }
+    }
+
+    private func getDaysResponse(_ count: Int) -> String {
+        if count == 7 {
+            return "Full commitment! That's how champions are made 🏆"
+        } else if count >= 5 {
+            return "Strong consistency! You're serious about this 💪"
+        } else if count >= 3 {
+            return "Good start! Building the habit step by step 🌟"
+        } else {
+            return "Every day counts! Let's make them powerful 🔥"
+        }
+    }
+
+    private func getDesiredWakeTimeResponse(_ time: Date) -> String {
+        let hour = Calendar.current.component(.hour, from: time)
+        if hour < 6 {
+            return "Wow! Early bird gets the worm 🐦 Respect!"
+        } else if hour < 7 {
+            return "Solid wake-up time! You'll own your mornings 🌅"
+        } else if hour < 8 {
+            return "Perfect timing! You'll have time for yourself before the world wakes up ⏰"
+        } else {
+            return "A fresh start! Let's make every morning count 🌞"
+        }
+    }
+
+    private func getHeardAboutResponse(_ source: String) -> String {
+        switch source {
+        case "Friend": return "Word of mouth is the best! Your friend knows what's up 🤝"
+        case "Social Media": return "The algorithm knows you need this! 📱"
+        case "App Store": return "Great find! The App Store recommended well 🌟"
+        case "Google": return "Smart search! You found the solution 🔍"
+        default: return "However you found us, I'm glad you're here! 💙"
+        }
+    }
+
+    private func getCommitmentResponse(_ commitment: String) -> String {
+        if commitment == "Determined" {
+            return "THAT'S the energy! You're already winning 🔥"
+        } else if commitment == "Seriously" {
+            return "I can feel it! You're ready for this 💪"
+        } else if commitment.contains("want to see") {
+            return "Curiosity is the first step! Let me show you what's possible 🌟"
+        } else {
+            return "It's okay to be unsure. I believe in you enough for both of us! 💙"
+        }
+    }
+
+    private func finishOnboarding() {
+        // Save user data
+        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        UserDefaults.standard.set(userName, forKey: "userName")
+        UserDefaults.standard.set(userAge, forKey: "userAge")
+        UserDefaults.standard.set(selectedSnoozeTime, forKey: "selectedSnoozeTime")
+        UserDefaults.standard.set(guiltyFeeling, forKey: "guiltyFeeling")
+        UserDefaults.standard.set(currentWakeTime, forKey: "currentWakeTime")
+        UserDefaults.standard.set(panicFeeling, forKey: "panicFeeling")
+        UserDefaults.standard.set(alarmsCount, forKey: "alarmsCount")
+        UserDefaults.standard.set(forgetTurnOff, forKey: "forgetTurnOff")
+        UserDefaults.standard.set(selfThought, forKey: "selfThought")
+        UserDefaults.standard.set(triesCount, forKey: "triesCount")
+        UserDefaults.standard.set(dreamActivity, forKey: "dreamActivity")
+        UserDefaults.standard.set(lifeDifference, forKey: "lifeDifference")
+        UserDefaults.standard.set(biggestDream, forKey: "biggestDream")
+        UserDefaults.standard.set(futureFeeling, forKey: "futureFeeling")
+        UserDefaults.standard.set(selectedMission, forKey: "selectedMission")
+        UserDefaults.standard.set(desiredWakeTime, forKey: "desiredWakeTime")
+        UserDefaults.standard.set(selectedSound, forKey: "selectedSound")
+        UserDefaults.standard.set(Array(selectedDays), forKey: "selectedDays")
+        UserDefaults.standard.set(heardAboutUs, forKey: "heardAboutUs")
+        UserDefaults.standard.set(commitment, forKey: "commitment")
+
+        Task {
+            await alarmManager.requestNotificationPermission()
+        }
+
+        withAnimation {
+            isComplete = true
+        }
+    }
+}
+
+// MARK: - Models
+
+struct ChatMessage: Identifiable {
+    let id = UUID()
+    let text: String
+    let isFromCoco: Bool
+    var mascotImage: String? = nil
+}
+
+enum ConversationStep {
+    case cocoMessage(String, mascot: String)
+    case userInput(InputType)
+    case userChoice(ChoiceType, options: [String])
+    case userMultiChoice(ChoiceType, options: [String])
+    case userTimePicker(TimePickerType)
+    case transitionToVisual
+    case finish
+}
+
+enum InputType {
+    case name
+    case dream
+}
+
+enum ChoiceType {
+    case age
+    case snoozeTime
+    case guiltyFeeling
+    case panicFeeling
+    case alarmsCount
+    case forgetTurnOff
+    case selfThought
+    case triesCount
+    case dreamActivity
+    case lifeDifference
+    case futureFeeling
+    case mission
+    case sound
+    case days
+    case heardAboutUs
+    case commitment
+}
+
+enum TimePickerType {
+    case currentWakeTime
+    case desiredWakeTime
+}
+
+// MARK: - Message Bubble
+
+struct MessageBubble: View {
+    let message: ChatMessage
+    let userName: String
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            if message.isFromCoco {
+                // Coco's message (left side)
+                if let mascotImage = message.mascotImage {
+                    Image(mascotImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 40, height: 40)
+                        .clipShape(Circle())
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(message.text)
+                        .font(.faro(size: 16))
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color.white)
+                        .cornerRadius(20)
+                        .cornerRadius(4, corners: [.bottomLeft])
+
+                    if message.mascotImage != nil {
+                        Text("Coco")
+                            .font(.faro(size: 11))
+                            .foregroundColor(.gray)
+                            .padding(.leading, 4)
+                    }
+                }
+
+                Spacer()
+            } else {
+                // User's message (right side)
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(message.text)
+                        .font(.faro(size: 16))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color.snapOrange)
+                        .cornerRadius(20)
+                        .cornerRadius(4, corners: [.bottomRight])
+
+                    Text(userName.isEmpty ? "You" : userName)
+                        .font(.faro(size: 11))
+                        .foregroundColor(.gray)
+                        .padding(.trailing, 4)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Typing Indicator
+
+struct TypingIndicator: View {
+    @State private var isAnimating = false
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            Image("mascot_guide")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 40, height: 40)
+                .clipShape(Circle())
+
+            HStack(spacing: 4) {
+                ForEach(0..<3) { index in
+                    Circle()
+                        .fill(Color.gray.opacity(0.5))
+                        .frame(width: 8, height: 8)
+                        .scaleEffect(isAnimating ? 1.2 : 0.8)
+                        .animation(
+                            Animation.easeInOut(duration: 0.6)
+                                .repeatForever()
+                                .delay(Double(index) * 0.2),
+                            value: isAnimating
+                        )
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.white)
+            .cornerRadius(20)
+
+            Spacer()
+        }
+        .onAppear {
+            isAnimating = true
+        }
+    }
+}
+
+// MARK: - Input Area
+
+struct InputArea: View {
+    let currentStep: ConversationStep
+    @Binding var input: String
+    @Binding var userName: String
+    @Binding var selectedSnoozeTime: String
+    @Binding var biggestDream: String
+    @Binding var commitment: String
+    @Binding var currentWakeTime: Date
+    @Binding var desiredWakeTime: Date
+    @Binding var selectedDays: Set<String>
+    let onSend: () -> Void
+
+    var body: some View {
+        VStack(spacing: 12) {
+            switch currentStep {
+            case .userInput(let type):
+                // Text input
+                VStack(spacing: 8) {
+                    HStack(spacing: 12) {
+                        TextField(placeholder(for: type), text: $input)
+                            .font(.faro(size: 16))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(Color.white)
+                            .cornerRadius(24)
+
+                        Button(action: onSend) {
+                            Image(systemName: "arrow.up.circle.fill")
+                                .font(.system(size: 36))
+                                .foregroundColor(input.isEmpty ? .gray : Color.snapOrange)
+                        }
+                        .disabled(input.isEmpty)
+                    }
+
+                    // Skip button for dream input
+                    if type == .dream {
+                        Button(action: {
+                            input = "I prefer not to say"
+                            onSend()
+                        }) {
+                            Text("Skip")
+                                .font(.faro(size: 14))
+                                .foregroundColor(.gray)
+                                .underline()
+                        }
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .padding(.trailing, 16)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color.snapLightBackground)
+
+            case .userChoice(_, let options):
+                // Choice buttons - vertical list (not full width)
+                VStack(alignment: .trailing, spacing: 12) {
+                    ForEach(options, id: \.self) { option in
+                        Button(action: {
+                            input = option
+                            onSend()
+                        }) {
+                            Text(option)
+                                .font(.faro(size: 16))
+                                .foregroundColor(.black)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 14)
+                                .background(Color.white)
+                                .cornerRadius(20)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                                )
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color.snapLightBackground)
+
+            case .userMultiChoice(_, let options):
+                // Multi-choice buttons (toggleable) - vertical list (not full width)
+                VStack(alignment: .trailing, spacing: 12) {
+                    ForEach(options, id: \.self) { option in
+                        Button(action: {
+                            if selectedDays.contains(option) {
+                                selectedDays.remove(option)
+                            } else {
+                                selectedDays.insert(option)
+                            }
+                        }) {
+                            HStack(spacing: 12) {
+                                Text(option)
+                                    .font(.faro(size: 16))
+                                    .foregroundColor(selectedDays.contains(option) ? .white : .black)
+                                if selectedDays.contains(option) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.white)
+                                        .font(.system(size: 18))
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 14)
+                            .background(selectedDays.contains(option) ? Color.snapOrange : Color.white)
+                            .cornerRadius(20)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(selectedDays.contains(option) ? Color.clear : Color.gray.opacity(0.2), lineWidth: 1)
+                            )
+                        }
+                    }
+
+                    Button(action: {
+                        input = Array(selectedDays).joined(separator: ", ")
+                        onSend()
+                    }) {
+                        Text("Continue")
+                            .font(.faro(size: 16))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 40)
+                            .padding(.vertical, 14)
+                            .background(selectedDays.isEmpty ? Color.gray.opacity(0.3) : Color.snapOrange)
+                            .cornerRadius(24)
+                    }
+                    .disabled(selectedDays.isEmpty)
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color.snapLightBackground)
+
+            case .userTimePicker(let type):
+                // Time picker
+                VStack(spacing: 12) {
+                    if type == .currentWakeTime {
+                        DatePicker("", selection: $currentWakeTime, displayedComponents: .hourAndMinute)
+                            .datePickerStyle(.wheel)
+                            .labelsHidden()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.white)
+                            .cornerRadius(16)
+                            .padding(.horizontal, 16)
+                    } else {
+                        DatePicker("", selection: $desiredWakeTime, displayedComponents: .hourAndMinute)
+                            .datePickerStyle(.wheel)
+                            .labelsHidden()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.white)
+                            .cornerRadius(16)
+                            .padding(.horizontal, 16)
+                    }
+
+                    Button(action: onSend) {
+                        Text("Continue")
+                            .font(.faro(size: 16))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 32)
+                            .padding(.vertical, 12)
+                            .background(Color.snapOrange)
+                            .cornerRadius(24)
+                    }
+                    .padding(.horizontal, 16)
+                }
+                .padding(.vertical, 12)
+                .background(Color.snapLightBackground)
+
+            default:
+                EmptyView()
+            }
+        }
+    }
+
+    private func placeholder(for type: InputType) -> String {
+        switch type {
+        case .name:
+            return "Type your name..."
+        case .dream:
+            return "Share your biggest dream..."
+        }
+    }
+}
+
+// MARK: - Corner Radius Extension
+
+extension View {
+    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape(RoundedCorner(radius: radius, corners: corners))
+    }
+}
+
+struct RoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
+        )
+        return Path(path.cgPath)
+    }
+}
+
+// MARK: - V1 Wrapper
+
+struct OnboardingV1Wrapper: View {
+    @Binding var isComplete: Bool
+    let userName: String
+    let userAge: String
+    let snoozeTime: String
+    let guiltyFeeling: String
+    let panicFeeling: String
+    let dreamActivity: String
+    let alarmsCount: String
+    let forgetTurnOff: String
+    let lifeDifference: String
+    let selfThought: String
+    let triesCount: String
+    let biggestDream: String
+    let commitment: String
+    let futureFeeling: String
+    let currentWakeTime: Date
+    let desiredWakeTime: Date
+
+    var body: some View {
+        OnboardingV1Bridge(
+            isComplete: $isComplete,
+            initialStep: 22, // Start at missionSelectionView
+            prefilledData: OnboardingPrefilledData(
+                userName: userName,
+                userAge: userAge,
+                snoozeTime: snoozeTime,
+                guiltyFeeling: guiltyFeeling,
+                panicFeeling: panicFeeling,
+                dreamActivity: dreamActivity,
+                alarmsCount: alarmsCount,
+                forgetTurnOff: forgetTurnOff,
+                lifeDifference: lifeDifference,
+                selfThought: selfThought,
+                triesCount: triesCount,
+                biggestDream: biggestDream,
+                commitment: commitment,
+                futureFeeling: futureFeeling,
+                currentWakeTime: currentWakeTime,
+                desiredWakeTime: desiredWakeTime
+            )
+        )
+    }
+}
+
+struct OnboardingPrefilledData {
+    let userName: String
+    let userAge: String
+    let snoozeTime: String
+    let guiltyFeeling: String
+    let panicFeeling: String
+    let dreamActivity: String
+    let alarmsCount: String
+    let forgetTurnOff: String
+    let lifeDifference: String
+    let selfThought: String
+    let triesCount: String
+    let biggestDream: String
+    let commitment: String
+    let futureFeeling: String
+    let currentWakeTime: Date
+    let desiredWakeTime: Date
+}
+
+struct OnboardingV1Bridge: View {
+    @Binding var isComplete: Bool
+    let initialStep: Int
+    let prefilledData: OnboardingPrefilledData
+
+    var body: some View {
+        ModifiedCompleteOnboardingView(
+            isComplete: $isComplete,
+            initialStep: initialStep,
+            userName: prefilledData.userName,
+            userAge: prefilledData.userAge,
+            snoozeTime: prefilledData.snoozeTime,
+            guiltyFeeling: prefilledData.guiltyFeeling,
+            panicFeeling: prefilledData.panicFeeling,
+            dreamActivity: prefilledData.dreamActivity,
+            alarmsCount: prefilledData.alarmsCount,
+            forgetTurnOff: prefilledData.forgetTurnOff,
+            lifeDifference: prefilledData.lifeDifference,
+            selfThought: prefilledData.selfThought,
+            triesCount: prefilledData.triesCount,
+            biggestDream: prefilledData.biggestDream,
+            commitment: prefilledData.commitment,
+            futureFeeling: prefilledData.futureFeeling,
+            currentWakeTime: prefilledData.currentWakeTime
+        )
+    }
+}
+
+// Wrapper that uses CompleteOnboardingView with prefilled data
+struct ModifiedCompleteOnboardingView: View {
+    @Binding var isComplete: Bool
+    let initialStep: Int
+    let userName: String
+    let userAge: String
+    let snoozeTime: String
+    let guiltyFeeling: String
+    let panicFeeling: String
+    let dreamActivity: String
+    let alarmsCount: String
+    let forgetTurnOff: String
+    let lifeDifference: String
+    let selfThought: String
+    let triesCount: String
+    let biggestDream: String
+    let commitment: String
+    let futureFeeling: String
+    let currentWakeTime: Date
+
+    var body: some View {
+        CompleteOnboardingViewWithData(
+            isComplete: $isComplete,
+            initialStep: initialStep,
+            userName: userName,
+            userAge: userAge,
+            snoozeTime: snoozeTime,
+            guiltyFeeling: guiltyFeeling,
+            panicFeeling: panicFeeling,
+            dreamActivity: dreamActivity,
+            alarmsCount: alarmsCount,
+            forgetTurnOff: forgetTurnOff,
+            lifeDifference: lifeDifference,
+            selfThought: selfThought,
+            triesCount: triesCount,
+            biggestDream: biggestDream,
+            commitment: commitment,
+            futureFeeling: futureFeeling,
+            currentWakeTime: currentWakeTime
+        )
+    }
+}
+
+struct CompleteOnboardingViewWithData: View {
+    @Environment(\.colorScheme) var colorScheme
+    @StateObject private var alarmManager = AlarmManager.shared
+    @Binding var isComplete: Bool
+
+    let initialStep: Int
+    @State private var currentStep: Int
+
+    // Pre-filled data from chat
+    @State private var userName: String
+    @State private var userAge: String
+    @State private var snoozeTime: String
+    @State private var guiltyFeeling: String
+    @State private var panicFeeling: String
+    @State private var dreamActivity: String
+    @State private var alarmsCount: String
+    @State private var forgetTurnOff: String
+    @State private var lifeDifference: String
+    @State private var selfThought: String
+    @State private var triesCount: String
+    @State private var biggestDream: String
+    @State private var commitment: String
+    @State private var futureFeeling: String
+    @State private var currentWakeTime: Date
+
+    @State private var selectedMission = ""
+    @State private var selectedSound = "Default"
+    @State private var selectedDays: Set<String> = []
+    @State private var loadingProgress = 0.0
+    @State private var showTransformationItems = false
+    @State private var desiredWakeTime = Date()
+    @State private var showCamera = false
+    @State private var wakeHistoryCard = ""
+    @State private var heardAboutUs = ""
+    @State private var userSignature = ""
+    @State private var planCreationProgress = 0.0
+
+    init(isComplete: Binding<Bool>, initialStep: Int, userName: String, userAge: String, snoozeTime: String, guiltyFeeling: String, panicFeeling: String, dreamActivity: String, alarmsCount: String, forgetTurnOff: String, lifeDifference: String, selfThought: String, triesCount: String, biggestDream: String, commitment: String, futureFeeling: String, currentWakeTime: Date) {
+        self._isComplete = isComplete
+        self.initialStep = initialStep
+        self._currentStep = State(initialValue: initialStep)
+        self._userName = State(initialValue: userName)
+        self._userAge = State(initialValue: userAge)
+        self._snoozeTime = State(initialValue: snoozeTime)
+        self._guiltyFeeling = State(initialValue: guiltyFeeling)
+        self._panicFeeling = State(initialValue: panicFeeling)
+        self._dreamActivity = State(initialValue: dreamActivity)
+        self._alarmsCount = State(initialValue: alarmsCount)
+        self._forgetTurnOff = State(initialValue: forgetTurnOff)
+        self._lifeDifference = State(initialValue: lifeDifference)
+        self._selfThought = State(initialValue: selfThought)
+        self._triesCount = State(initialValue: triesCount)
+        self._biggestDream = State(initialValue: biggestDream)
+        self._commitment = State(initialValue: commitment)
+        self._futureFeeling = State(initialValue: futureFeeling)
+        self._currentWakeTime = State(initialValue: currentWakeTime)
+    }
+
+    var body: some View {
+        // Just use CompleteOnboardingView directly
+        CompleteOnboardingView(isComplete: $isComplete)
+    }
+}
+
+    var header: some View {
+        HStack(spacing: 16) {
+            if currentStep > 0 {
+                Button(action: {
+                    withAnimation {
+                        currentStep -= 1
+                    }
+                }) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 36, height: 36)
+
+                        Image(systemName: "chevron.left")
+                            .font(.faroBold(size: 16))
+                            .foregroundColor(.black)
+                    }
+                }
+            }
+
+            Spacer()
+
+            // Progress bar
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(height: 6)
+
+                    Capsule()
+                        .fill(Color.snapOrange)
+                        .frame(width: geometry.size.width * CGFloat(currentStep + 1) / 4.0, height: 6)
+                }
+            }
+            .frame(height: 6)
+        }
+        .padding(.horizontal, 32)
+        .padding(.top, 16)
+        .padding(.bottom, 8)
+    }
+
+    // MARK: - Mission Selection
+    var missionSelectionView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 20)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Choose your\nwake-up mission")
+                    .font(.poppinsBold(size: 34))
+                    .foregroundColor(.black)
+
+                Text("You will have to complete it to turn off the alarm")
+                    .font(.faro(size: 17))
+                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+
+            ScrollView {
+                VStack(spacing: 16) {
+                    missionOption("figure.strengthtraining.traditional", "Push-ups", "15 seconds of push-ups", selectedMission == "Push-ups", gradient: [Color(hex: "FF6B6B"), Color(hex: "FF4757")])
+                    missionOption("camera.fill", "Sky Photo", "Take a photo of the sky", selectedMission == "Sky Photo", gradient: [Color(hex: "4A90E2"), Color(hex: "357ABD")])
+                    missionOption("bed.double.fill", "Make Your Bed", "Show a made bed", selectedMission == "Make Your Bed", gradient: [Color(hex: "9B59B6"), Color(hex: "8E44AD")])
+                    missionOption("book.fill", "Bible Verse", "Say a short verse", selectedMission == "Bible Verse", gradient: [Color(hex: "F39C12"), Color(hex: "E67E22")])
+                    missionOption("sparkles", "Affirmation", "Read an affirmation", selectedMission == "Affirmation", gradient: [Color(hex: "FFD700"), Color(hex: "FFA500")])
+                    missionOption("magnifyingglass", "Object Hunt", "Find an object", selectedMission == "Object Hunt", gradient: [Color(hex: "00A86B"), Color(hex: "00D084")])
+                    missionOption("figure.walk", "Walk", "Take a few steps", selectedMission == "Walk", gradient: [Color.snapOrange, Color(hex: "FF8C00")])
+                    missionOption("brain.head.profile", "Math Problem", "Solve a calculation", selectedMission == "Math Problem", gradient: [Color(hex: "3498DB"), Color(hex: "2980B9")])
+                }
+                .padding(.horizontal, 32)
+            }
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    func missionOption(_ iconName: String, _ name: String, _ description: String, _ isSelected: Bool, gradient: [Color]) -> some View {
+        Button(action: {
+            selectedMission = name
+            withAnimation {
+                currentStep += 1
+            }
+        }) {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: gradient,
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 60, height: 60)
+
+                    Image(systemName: iconName)
+                        .font(.poppinsBold(size: 26))
+                        .foregroundColor(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(name)
+                        .font(.faroBold(size: 17))
+                        .foregroundColor(.black)
+                    Text(description)
+                        .font(.faro(size: 13))
+                        .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                }
+
+                Spacer()
+            }
+            .padding(16)
+            .background(Color.white)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? Color.snapOrange : Color.clear, lineWidth: 3)
+            )
+            .cornerRadius(16)
+            .shadow(color: isSelected ? Color.snapOrange.opacity(0.3) : Color.black.opacity(0.05), radius: isSelected ? 12 : 8, y: 4)
+        }
+    }
+
+    // MARK: - Desired Wake Time
+    var desiredWakeTimeView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 20)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("What time do you\nwant to wake up?")
+                    .font(.poppinsBold(size: 34))
+                    .foregroundColor(.black)
+
+                Text("Choose your ideal wake-up time")
+                    .font(.faro(size: 17))
+                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+
+            Spacer()
+
+            DatePicker("", selection: $desiredWakeTime, displayedComponents: .hourAndMinute)
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                .padding(.horizontal, 32)
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Color.snapOrange)
+                    .cornerRadius(16)
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 32)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    // MARK: - Sound Selection
+    var soundSelectionView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 20)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Choose your\nalarm sound")
+                    .font(.poppinsBold(size: 32))
+                    .foregroundColor(.black)
+
+                Text("Pick the sound that gets you up.")
+                    .font(.faro(size: 17))
+                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+
+            ScrollView {
+                VStack(spacing: 16) {
+                    soundCategoryGrouped(icon: "", title: "CLASSIC", sounds: ["Default", "Alarm Clock Bell", "UK Tea Timer"], colors: [Color(hex: "8E8E93"), Color(hex: "5E6C84"), Color(hex: "6B8E23")])
+
+                    soundCategoryGrouped(icon: "⚡", title: "AGGRESSIVE", sounds: ["Air Raid Siren", "Rooster Crowing"], colors: [Color(hex: "DC143C"), Color(hex: "8B4513")])
+
+                    soundCategoryGrouped(icon: "🧘", title: "PEACEFUL", sounds: ["Morning Birds", "Ocean Waves", "Zen Garden"], colors: [Color(hex: "87CEEB"), Color(hex: "4682B4"), Color(hex: "2E8B57")])
+                }
+                .padding(.horizontal, 32)
+            }
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Color.snapOrange)
+                    .cornerRadius(16)
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 32)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    func soundCategoryGrouped(icon: String, title: String, sounds: [String], colors: [Color]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                if !icon.isEmpty {
+                    Text(icon)
+                        .font(.system(size: 16))
+                }
+                Text(title)
+                    .font(.faroBold(size: 13))
+                    .foregroundColor(.gray)
+            }
+            .padding(.leading, 4)
+
+            VStack(spacing: 12) {
+                ForEach(Array(sounds.enumerated()), id: \.element) { index, sound in
+                    soundOption(sound, isSelected: selectedSound == sound, color: colors[min(index, colors.count - 1)])
+                }
+            }
+        }
+    }
+
+    func soundOption(_ sound: String, isSelected: Bool, color: Color) -> some View {
+        Button(action: {
+            selectedSound = sound
+        }) {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(color)
+                        .frame(width: 50, height: 50)
+
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.white)
+                }
+
+                Text(sound)
+                    .font(.faro(size: 17))
+                    .foregroundColor(.black)
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.snapOrange)
+                        .font(.system(size: 24))
+                }
+            }
+            .padding(16)
+            .background(Color.white)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? Color.snapOrange : Color.clear, lineWidth: 2)
+            )
+            .cornerRadius(16)
+        }
+    }
+
+    // MARK: - Days Selection
+    var daysSelectionView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 20)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Which days should\nit ring?")
+                    .font(.poppinsBold(size: 34))
+                    .foregroundColor(.black)
+
+                Text("Select the days for your alarm")
+                    .font(.faro(size: 17))
+                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+
+            ScrollView {
+                VStack(spacing: 16) {
+                    ForEach(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], id: \.self) { day in
+                        let shortDay = String(day.prefix(3))
+                        dayOption(day, shortDay: shortDay, isSelected: selectedDays.contains(shortDay))
+                    }
+
+                    HStack(spacing: 16) {
+                        Button(action: {
+                            selectedDays = ["Mon", "Tue", "Wed", "Thu", "Fri"]
+                        }) {
+                            Text("Weekdays")
+                                .font(.faro(size: 15))
+                                .foregroundColor(.snapOrange)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 12)
+                                .background(Color.white)
+                                .cornerRadius(12)
+                        }
+
+                        Button(action: {
+                            selectedDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+                        }) {
+                            Text("Every Day")
+                                .font(.faro(size: 15))
+                                .foregroundColor(.snapOrange)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 12)
+                                .background(Color.white)
+                                .cornerRadius(12)
+                        }
+                    }
+                }
+                .padding(.horizontal, 32)
+            }
+
+            Button(action: {
+                finishOnboarding()
+            }) {
+                Text("Start My Journey 🚀")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(selectedDays.isEmpty ? Color.gray.opacity(0.3) : Color.snapOrange)
+                    .cornerRadius(16)
+            }
+            .disabled(selectedDays.isEmpty)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 32)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    func dayOption(_ day: String, shortDay: String, isSelected: Bool) -> some View {
+        Button(action: {
+            if selectedDays.contains(shortDay) {
+                selectedDays.remove(shortDay)
+            } else {
+                selectedDays.insert(shortDay)
+            }
+        }) {
+            HStack {
+                Text(day)
+                    .font(.faro(size: 17))
+                    .foregroundColor(isSelected ? .white : .black)
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.white)
+                }
+            }
+            .padding(16)
+            .background(isSelected ? Color.snapOrange : Color.white)
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? Color.clear : Color.gray.opacity(0.2), lineWidth: 1)
+            )
+        }
+    }
+
+    func finishOnboarding() {
+        // Save all data
+        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        UserDefaults.standard.set(prefilledData.userName, forKey: "userName")
+        UserDefaults.standard.set(prefilledData.userAge, forKey: "userAge")
+        UserDefaults.standard.set(prefilledData.snoozeTime, forKey: "selectedSnoozeTime")
+        UserDefaults.standard.set(prefilledData.guiltyFeeling, forKey: "guiltyFeeling")
+        UserDefaults.standard.set(prefilledData.currentWakeTime, forKey: "currentWakeTime")
+        UserDefaults.standard.set(prefilledData.panicFeeling, forKey: "panicFeeling")
+        UserDefaults.standard.set(prefilledData.alarmsCount, forKey: "alarmsCount")
+        UserDefaults.standard.set(prefilledData.forgetTurnOff, forKey: "forgetTurnOff")
+        UserDefaults.standard.set(prefilledData.selfThought, forKey: "selfThought")
+        UserDefaults.standard.set(prefilledData.triesCount, forKey: "triesCount")
+        UserDefaults.standard.set(prefilledData.dreamActivity, forKey: "dreamActivity")
+        UserDefaults.standard.set(prefilledData.lifeDifference, forKey: "lifeDifference")
+        UserDefaults.standard.set(prefilledData.biggestDream, forKey: "biggestDream")
+        UserDefaults.standard.set(prefilledData.futureFeeling, forKey: "futureFeeling")
+        UserDefaults.standard.set(selectedMission, forKey: "selectedMission")
+        UserDefaults.standard.set(desiredWakeTime, forKey: "desiredWakeTime")
+        UserDefaults.standard.set(selectedSound, forKey: "selectedSound")
+        UserDefaults.standard.set(Array(selectedDays), forKey: "selectedDays")
+
+        Task {
+            await alarmManager.requestNotificationPermission()
+        }
+
+        withAnimation {
+            isComplete = true
+        }
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    OnboardingV2View(isComplete: .constant(false))
+}

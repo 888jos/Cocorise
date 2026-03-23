@@ -1,0 +1,3717 @@
+//
+//  CompleteOnboardingView.swift
+//  SnapWake
+//
+//  Created by Josselin Biot on 07/03/2026.
+//
+
+import SwiftUI
+import Lottie
+
+struct CompleteOnboardingView: View {
+    @Environment(\.colorScheme) var colorScheme
+    @StateObject private var alarmManager = AlarmManager.shared
+    @Binding var isComplete: Bool
+
+    @State private var currentStep = 0
+
+    // User info
+    @State private var userName = ""
+    @State private var userAge = ""
+
+    // Emotional trigger questions
+    @State private var snoozeTime = ""
+    @State private var guiltyFeeling = ""
+    @State private var panicFeeling = ""
+    @State private var dreamActivity = ""
+    @State private var alarmsCount = ""
+    @State private var forgetTurnOff = ""
+    @State private var lifeDifference = ""
+    @State private var selfThought = ""
+    @State private var triesCount = ""
+    @State private var biggestDream = ""
+    @State private var commitment = ""
+    @State private var futureFeeling = ""
+
+    @State private var selectedMission = ""
+    @State private var selectedSound = "Default"
+    @State private var selectedDays: Set<String> = []
+    @State private var loadingProgress = 0.0
+    @State private var showTransformationItems = false
+
+    @State private var currentWakeTime = Date()
+    @State private var desiredWakeTime = Date()
+    @State private var showCamera = false
+    @State private var wakeHistoryCard = ""
+    @State private var heardAboutUs = ""
+    @State private var userSignature = ""
+    @State private var planCreationProgress = 0.0
+
+    var progress: Double {
+        Double(currentStep) / 39.0
+    }
+
+    var missionExplanations: [String: String] {
+        [
+            "Pompes": "Les pompes activent immédiatement ton système cardiovasculaire et augmentent ton flux sanguin, rendant impossible le retour au lit.",
+            "Photo du ciel": "Sortir de chez toi et voir la lumière naturelle réinitialise ton horloge biologique et te réveille instantanément.",
+            "Faire ton lit": "Accomplir cette première tâche crée un momentum positif et t'empêche psychologiquement de te recoucher.",
+            "Verset biblique": "Réciter à voix haute engage ton cerveau, ta mémoire et ta spiritualité, te mettant dans un état d'éveil mental.",
+            "Affirmation": "Dire des affirmations positives à voix haute stimule ton cerveau et programme ton mindset pour la journée.",
+            "Chasse à l'objet": "Se déplacer dans ta maison et chercher un objet active ton corps et ton cerveau simultanément.",
+            "Marcher": "La marche force ton corps à se mettre en mouvement, augmente ta température corporelle et te réveille naturellement.",
+            "Problème de maths": "Résoudre un calcul mental active tes fonctions cognitives et sort ton cerveau du mode sommeil."
+        ]
+    }
+
+    var body: some View {
+        ZStack {
+            Color.snapLightBackground
+                .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Header with back button and progress
+                header
+
+                content
+            }
+        }
+    }
+
+    var header: some View {
+        HStack(spacing: 16) {
+            if currentStep > 0 {
+                Button(action: {
+                    withAnimation {
+                        currentStep = max(0, currentStep - 1)
+                    }
+                }) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 36, height: 36)
+
+                        Image(systemName: "chevron.left")
+                            .font(.faroBold(size: 16))
+                            .foregroundColor(.black)
+                    }
+                }
+            } else {
+                Spacer()
+                    .frame(width: 36)
+            }
+
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.snapBorder(for: colorScheme))
+                        .frame(height: 4)
+
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.snapOrange)
+                        .frame(width: max(0, min(geometry.size.width, geometry.size.width * progress)), height: 4)
+                }
+            }
+            .frame(height: 4)
+
+            Spacer()
+                .frame(width: 36)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+    }
+
+    @ViewBuilder
+    var content: some View {
+        switch currentStep {
+        // NOUVELLE SECTION: User Info
+        case 0: nameQuestionView // First name
+        case 1: ageQuestionView // Age
+
+        // PARTIE 1: Questions émotionnelles d'origine
+        case 2: snoozeQuestionView // Q1: Temps de snooze
+        case 3: guiltyFeelingView // Q2: Culpabilité
+        case 4: currentWakeTimeView // 🕐 Heure de lever actuelle
+        case 5: reassuranceView1 // 🎯 Reassurance: Tu n'es pas seul
+        case 6: panicFeelingView // Q3: Panique/retard
+        case 7: painAmplificationView // 🎯 Graphic: Temps perdu visualisé
+        case 8: alarmsCountView // Q5: Nombre d'alarmes
+        case 9: quoteView1 // 🎯 Quote: "The secret of getting ahead..."
+        case 10: forgetTurnOffView // Q6: Oublier d'avoir éteint
+        case 11: selfThoughtView // Q8: Pensées négatives
+        case 12: empathyView // 🎯 Reassurance: On comprend
+        case 13: triesCountView // Q9: Tentatives échouées
+        case 14: transformationGraphicView // 🎯 Graphic: Avant/Après
+        case 15: dreamActivityView // Q4: Activité de rêve
+        case 16: quoteView2 // 🎯 Quote: "Your future is created..."
+        case 17: lifeDifferenceView // Q7: Vie différente
+        case 18: biggestDreamView // Q10: Plus grand rêve
+        case 19: visionBoardView // 🎯 Graphic: Vision board
+        case 20: futureFeelingView // Q12: Sentiment futur
+        case 21: successStoriesView // 🎯 Reassurance: Success stories
+
+        // PARTIE 2: Nouveau flow d'action
+        case 22: missionSelectionView // Choix mission
+        case 23: missionCongratulationView // Félicitation mission
+        case 24: letsTryItNowView // Let's try it now
+        case 25: missionCameraView // Démo caméra
+        case 26: ratingWithSocialProofView // Rating avec social proof
+        case 27: stayOnTrackNotificationView // Stay on track + notification
+        case 28: requestTrackingView // Request tracking
+        case 29: desiredWakeTimeView // Ideal wake up time
+        case 30: soundSelectionView // Choix son alarme
+        case 31: daysSelectionView // Jours où l'alarme sonne
+        case 32: wakeHistoryCardView // Choose your wake history card
+        case 33: heardAboutUsView // Où avez-vous entendu parler de nous
+        case 34: quoteWinTheMorningView // Quote: "If you win the morning..."
+        case 35: readyToBecomeView // Ready to become a morning person
+        case 36: signatureCommitmentView // Make the commitment - Signature
+        case 37: planCreationView // Création du plan 0-100%
+        case 38: finishView // Paywall
+        default: finishView
+        }
+    }
+
+    // MARK: - Step 0: Name Question
+    var nameQuestionView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 40) {
+                MascotView(.bienvenue, size: .large)
+
+                VStack(spacing: 16) {
+                    Text("What's your\nfirst name?")
+                        .font(.faroBold(size: 42))
+                        .foregroundColor(.black)
+                        .multilineTextAlignment(.center)
+
+                    TextField("Enter your name", text: $userName)
+                        .font(.faro(size: 24))
+                        .foregroundColor(.black)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(16)
+                        .shadow(color: Color.black.opacity(0.05), radius: 8, y: 4)
+                        .padding(.horizontal, 32)
+                }
+            }
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(!userName.isEmpty ? Color.snapOrange : Color.gray.opacity(0.3))
+                    .cornerRadius(30)
+            }
+            .disabled(userName.isEmpty)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    // MARK: - Step 1: Age Question
+    var ageQuestionView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 20)
+
+            Text("How old are you,\n\(userName)?")
+                .font(.faroBold(size: 24))
+                .foregroundColor(.black)
+                .multilineTextAlignment(.leading)
+                .padding(.horizontal, 32)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 20)
+
+            VStack(spacing: 16) {
+                ForEach(Array(["Under 18", "18-24", "25-34", "35-44", "45-54", "55+"].enumerated()), id: \.element) { index, option in
+                    optionButton(option, number: index + 1, isSelected: userAge == option) {
+                        userAge = option
+                    }
+                }
+            }
+            .padding(.horizontal, 32)
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(!userAge.isEmpty ? Color.snapOrange : Color.gray.opacity(0.3))
+                    .cornerRadius(30)
+            }
+            .disabled(userAge.isEmpty)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    // MARK: - Step 2: Snooze Question
+    var snoozeQuestionView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 20)
+
+            Text("How long do you spend\nsnoozing each morning?")
+                .font(.faroBold(size: 24))
+                .foregroundColor(.black)
+                .multilineTextAlignment(.leading)
+                .padding(.horizontal, 32)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 20)
+                .opacity(1.0)
+                .animation(.easeOut(duration: 0.5), value: currentStep)
+
+            VStack(spacing: 16) {
+                ForEach(Array(["Under 10 minutes", "10-20 minutes", "20-30 minutes", "30-45 minutes", "45-60 minutes", "Over an hour"].enumerated()), id: \.element) { index, option in
+                    optionButton(option, number: index + 1, isSelected: snoozeTime == option) {
+                        snoozeTime = option
+                    }
+                    .transition(.opacity.combined(with: .offset(y: 20)))
+                    .animation(.easeOut(duration: 0.3).delay(Double(index) * 0.08), value: currentStep)
+                }
+            }
+            .padding(.horizontal, 32)
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(!snoozeTime.isEmpty ? Color.snapOrange : Color.gray.opacity(0.3))
+                    .cornerRadius(30)
+            }
+            .disabled(snoozeTime.isEmpty)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    // MARK: - Q2: Guilty Feeling
+    var guiltyFeelingView: some View {
+        questionView(
+            title: "Te sens-tu souvent coupable\nde ne pas te lever à la\npremière alarme?",
+            options: ["Oui, tous les jours", "Plusieurs fois", "Parfois", "Rarement"],
+            selection: $guiltyFeeling
+        )
+    }
+
+    // MARK: - 🕐 Current Wake Time
+    var currentWakeTimeView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 32) {
+                VStack(spacing: 12) {
+                    Text("À quelle heure te lèves-tu\nréellement en ce moment?")
+                        .font(.faroBold(size: 28))
+                        .foregroundColor(.black)
+                        .multilineTextAlignment(.center)
+
+                    Text("Sois honnête, on est là pour t'aider")
+                        .font(.faro(size: 16))
+                        .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, 32)
+
+                DatePicker("", selection: $currentWakeTime, displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 32)
+            }
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Color.snapOrange)
+                    .cornerRadius(30)
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    // MARK: - 🎯 Reassurance 1: Not Alone
+    var reassuranceView1: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 40) {
+                MascotView(.bienvenue, size: .medium)
+                    .padding(.top, 20)
+
+                Text("Tu n'es pas seul")
+                    .font(.faroBold(size: 42))
+                    .foregroundColor(.black)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+
+                // Stats cards en grille 2x2
+                VStack(spacing: 16) {
+                    HStack(spacing: 16) {
+                        // 10K+ users
+                        VStack(spacing: 12) {
+                            Text("👥")
+                                .font(.system(size: 48))
+                            VStack(spacing: 4) {
+                                Text("10K+")
+                                    .font(.faroBold(size: 32))
+                                    .foregroundColor(.black)
+                                Text("utilisateurs")
+                                    .font(.faro(size: 14))
+                                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 24)
+                        .background(Color.white)
+                        .cornerRadius(20)
+                        .shadow(color: Color.black.opacity(0.06), radius: 8, y: 4)
+
+                        // 85% success
+                        VStack(spacing: 12) {
+                            Text("🎯")
+                                .font(.system(size: 48))
+                            VStack(spacing: 4) {
+                                Text("85%")
+                                    .font(.faroBold(size: 32))
+                                    .foregroundColor(.black)
+                                Text("de réussite")
+                                    .font(.faro(size: 14))
+                                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 24)
+                        .background(Color.white)
+                        .cornerRadius(20)
+                        .shadow(color: Color.black.opacity(0.06), radius: 8, y: 4)
+                    }
+
+                    HStack(spacing: 16) {
+                        // 4.8 stars
+                        VStack(spacing: 12) {
+                            HStack(spacing: 2) {
+                                ForEach(0..<5, id: \.self) { _ in
+                                    Image(systemName: "star.fill")
+                                        .font(.faro(size: 14))
+                                        .foregroundColor(Color(hex: "FFD700"))
+                                }
+                            }
+                            VStack(spacing: 4) {
+                                Text("4.8/5")
+                                    .font(.faroBold(size: 32))
+                                    .foregroundColor(.black)
+                                Text("note app")
+                                    .font(.faro(size: 14))
+                                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 24)
+                        .background(Color.white)
+                        .cornerRadius(20)
+                        .shadow(color: Color.black.opacity(0.06), radius: 8, y: 4)
+
+                        // Verified
+                        VStack(spacing: 12) {
+                            Text("✓")
+                                .font(.faroBold(size: 48))
+                                .foregroundColor(Color(hex: "00A86B"))
+                            VStack(spacing: 4) {
+                                Text("Vérifié")
+                                    .font(.faroBold(size: 20))
+                                    .foregroundColor(.black)
+                                Text("par Apple")
+                                    .font(.faro(size: 14))
+                                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 24)
+                        .background(Color.white)
+                        .cornerRadius(20)
+                        .shadow(color: Color.black.opacity(0.06), radius: 8, y: 4)
+                    }
+                }
+                .padding(.horizontal, 32)
+
+                Text("Rejoins une communauté qui a transformé ses matins")
+                    .font(.faro(size: 17))
+                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
+
+            Spacer()
+        }
+        .background(Color.snapLightBackground)
+        .onTapGesture {
+            withAnimation {
+                currentStep += 1
+            }
+        }
+    }
+
+    func statBox(_ number: String, _ text: String) -> some View {
+        HStack(spacing: 16) {
+            Text(number)
+                .font(.faroBold(size: 32))
+                .foregroundColor(Color.snapOrange)
+                .frame(width: 80)
+
+            Text(text)
+                .font(.faro(size: 17))
+                .foregroundColor(Color.snapTextPrimary(for: colorScheme))
+                .multilineTextAlignment(.leading)
+
+            Spacer()
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(16)
+    }
+
+    // MARK: - Q3: Panic Feeling
+    var panicFeelingView: some View {
+        questionView(
+            title: "Comment te sens-tu quand\ntu te réveilles en panique\net en retard?",
+            options: ["Stressé", "En colère", "Découragé", "Ça ruine ma journée"],
+            selection: $panicFeeling
+        )
+    }
+
+    // MARK: - 🎯 Pain Amplification: Time Lost Graphic
+    var painAmplificationView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 60)
+
+            // Lottie animation: sand clock
+            LottieView(animationName: "sand clock", loopMode: .playOnce)
+                .frame(width: 200, height: 200)
+
+            Text("Le coût réel\ndu snooze")
+                .font(.faroBold(size: 38))
+                .foregroundColor(.black)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+                .padding(.top, 20)
+                .padding(.bottom, 40)
+
+            // Progression verticale simple
+            VStack(spacing: 16) {
+                TimeLostRow(period: "1 semaine", hours: "2h")
+                TimeLostRow(period: "1 mois", hours: "10h")
+                TimeLostRow(period: "1 an", hours: "120h")
+
+                // Dramatic reveal - 10 ans
+                VStack(spacing: 16) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("10 ans")
+                                .font(.faroBold(size: 24))
+                                .foregroundColor(.white)
+                            Text("1 200 heures")
+                                .font(.faro(size: 18))
+                                .foregroundColor(.white.opacity(0.95))
+                        }
+                        Spacer()
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.faroBold(size: 36))
+                            .foregroundColor(.white)
+                    }
+                    .padding(24)
+                    .background(
+                        LinearGradient(
+                            colors: [Color(hex: "FF4757"), Color(hex: "FF6B6B")],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .cornerRadius(24)
+                    .shadow(color: Color.red.opacity(0.3), radius: 20, y: 10)
+                }
+                .padding(.top, 8)
+            }
+            .padding(.horizontal, 32)
+
+            Spacer().frame(height: 40)
+
+            // Final impact statement
+            VStack(spacing: 8) {
+                HStack(spacing: 12) {
+                    Image(systemName: "calendar.badge.exclamationmark")
+                        .font(.faroBold(size: 32))
+                        .foregroundColor(.red)
+
+                    Text("50 jours")
+                        .font(.faroBold(size: 52))
+                        .foregroundColor(.red)
+                }
+
+                Text("de ta vie partis en fumée")
+                    .font(.faro(size: 17))
+                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+            }
+
+            Spacer()
+
+            Text("tape pour continuer")
+                .font(.faro(size: 15))
+                .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+                .padding(.bottom, 60)
+        }
+        .background(Color.snapLightBackground)
+        .onTapGesture {
+            withAnimation {
+                currentStep += 1
+            }
+        }
+    }
+
+    // Nouvelle row simplifiée pour time lost
+    func TimeLostRow(period: String, hours: String) -> some View {
+        HStack {
+            Text(period)
+                .font(.faroBold(size: 18))
+                .foregroundColor(.black)
+            Spacer()
+            HStack(spacing: 8) {
+                Text(hours)
+                    .font(.faro(size: 16))
+                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                Image(systemName: "arrow.down")
+                    .font(.faroBold(size: 14))
+                    .foregroundColor(Color.snapOrange)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(Color.white)
+        .cornerRadius(16)
+    }
+
+    struct TimeStackCard: View {
+        @Environment(\.colorScheme) var colorScheme
+        let period: String
+        let hours: String
+        let position: Int
+
+        var body: some View {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(period)
+                        .font(.faroBold(size: 16))
+                        .foregroundColor(.black)
+                    Text(hours)
+                        .font(.faro(size: 14))
+                        .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                }
+                Spacer()
+                Image(systemName: "arrow.down")
+                    .font(.faroBold(size: 16))
+                    .foregroundColor(Color.snapOrange)
+            }
+            .padding(16)
+            .background(Color.white)
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.05), radius: 8, y: 4)
+            .padding(.horizontal, 32)
+            .offset(y: CGFloat(position * -4))
+        }
+    }
+
+    func timeWasteBar(_ period: String, hours: Double, maxHours: Double, isHighlight: Bool = false, emoji: String = "") -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                HStack(spacing: 6) {
+                    if !emoji.isEmpty {
+                        Text(emoji)
+                            .font(.faro(size: 16))
+                    }
+                    Text(period)
+                        .font(.faroBold(size: 14))
+                        .foregroundColor(isHighlight ? .red : .black)
+                }
+                Spacer()
+                Text("\(Int(hours))h")
+                    .font(.faroBold(size: 16))
+                    .foregroundColor(isHighlight ? .red : Color.snapOrange)
+            }
+
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(height: 14)
+
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(
+                            LinearGradient(
+                                colors: isHighlight ? [.red, Color(hex: "FF6B6B")] : [Color.snapOrange, Color(hex: "FFB84D")],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: geometry.size.width * min(hours / maxHours, 1.0), height: 14)
+                        .shadow(color: (isHighlight ? Color.red : Color.snapOrange).opacity(0.3), radius: 4, y: 2)
+                }
+            }
+            .frame(height: 14)
+        }
+        .padding(16)
+        .background(isHighlight ? Color.red.opacity(0.05) : Color.white)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(isHighlight ? Color.red.opacity(0.2) : Color.clear, lineWidth: 2)
+        )
+    }
+
+    // MARK: - Q4: Dream Activity
+    var dreamActivityView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 16)
+
+            Text("Qu'est-ce que tu pourrais accomplir avec 30 minutes de plus chaque matin?")
+                .font(.faroBold(size: 24))
+                .foregroundColor(.black)
+                .multilineTextAlignment(.leading)
+                .padding(.horizontal, 32)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 80)
+
+            VStack(spacing: 16) {
+                dreamOption("Faire du sport", number: 1)
+                dreamOption("Prendre un vrai petit-déjeuner", number: 2)
+                dreamOption("Méditer ou pratiquer le yoga", number: 3)
+                dreamOption("Travailler sur mes projets", number: 4)
+                dreamOption("Passer du temps avec mes proches", number: 5)
+            }
+            .padding(.horizontal, 32)
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(!dreamActivity.isEmpty ? Color.snapOrange : Color.gray.opacity(0.3))
+                    .cornerRadius(30)
+            }
+            .disabled(dreamActivity.isEmpty)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    func dreamOption(_ text: String, number: Int) -> some View {
+        Button(action: {
+            dreamActivity = text
+        }) {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Color.snapOrange)
+                        .frame(width: 32, height: 32)
+
+                    Text("\(number)")
+                        .font(.faroBold(size: 15))
+                        .foregroundColor(.white)
+                }
+
+                Text(text)
+                    .font(.faro(size: 17))
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.vertical, 16)
+            .padding(.horizontal, 24)
+            .background(Color.white)
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(dreamActivity == text ? Color.snapOrange : Color.clear, lineWidth: 2)
+            )
+        }
+    }
+
+    // MARK: - 🎯 Quote 2: Your Future
+    var quoteView2: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            ZStack {
+                // Lottie animation: shining stars en arrière-plan
+                LottieView(animationName: "shining stars", loopMode: .playOnce)
+                    .frame(width: 200, height: 200)
+                    .opacity(0.3)
+
+                VStack(spacing: 0) {
+                    HStack(alignment: .top) {
+                        Text("\"")
+                            .font(.faroBold(size: 60))
+                            .foregroundColor(.white.opacity(0.3))
+                        Spacer()
+                    }
+
+                    VStack(spacing: 0) {
+                        Text("Ton futur est créé par")
+                            .font(.faro(size: 22))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+
+                        Text("ce que tu fais aujourd'hui,")
+                            .font(.faro(size: 22))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+
+                        Text("pas demain.")
+                            .font(.faro(size: 22))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    HStack(alignment: .bottom) {
+                        Spacer()
+                        Text("\"")
+                            .font(.faroBold(size: 60))
+                            .foregroundColor(.white.opacity(0.3))
+                    }
+                    .padding(.bottom, 16)
+
+                    HStack(spacing: 8) {
+                        Rectangle()
+                            .fill(Color.black)
+                            .frame(width: 40, height: 3)
+
+                        Text("Robert Kiyosaki")
+                            .font(.faro(size: 14))
+                            .foregroundColor(.white.opacity(0.8))
+
+                        Rectangle()
+                            .fill(Color.black)
+                            .frame(width: 40, height: 3)
+                    }
+                }
+                .padding(.vertical, 48)
+                .padding(.horizontal, 40)
+            }
+            .background(Color.snapOrange)
+            .cornerRadius(24)
+            .shadow(color: Color.snapOrange.opacity(0.3), radius: 20, x: 0, y: 10)
+            .padding(.horizontal, 32)
+
+            Spacer()
+        }
+        .background(Color.snapLightBackground)
+        .onTapGesture {
+            withAnimation {
+                currentStep += 1
+            }
+        }
+    }
+
+    // MARK: - Q5: Alarms Count (kept)
+    var alarmsCountView: some View {
+        questionView(
+            title: "Combien d'alarmes as-tu\nconfiguré actuellement?",
+            options: ["Une seule", "2-3", "4-6", "Plus de 7", "Je ne sais plus"],
+            selection: $alarmsCount
+        )
+    }
+
+    // MARK: - 🎯 Quote 1: Getting Started
+    var quoteView1: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            ZStack {
+                // Lottie animation: shining stars en arrière-plan
+                LottieView(animationName: "shining stars", loopMode: .playOnce)
+                    .frame(width: 200, height: 200)
+                    .opacity(0.3)
+
+                VStack(spacing: 0) {
+                    HStack(alignment: .top) {
+                        Text("\"")
+                            .font(.faroBold(size: 60))
+                            .foregroundColor(.white.opacity(0.3))
+                        Spacer()
+                    }
+
+                    VStack(spacing: 0) {
+                        Text("Le secret pour avancer,")
+                            .font(.faro(size: 22))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+
+                        Text("c'est de commencer.")
+                            .font(.faro(size: 22))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    HStack(alignment: .bottom) {
+                        Spacer()
+                        Text("\"")
+                            .font(.faroBold(size: 60))
+                            .foregroundColor(.white.opacity(0.3))
+                    }
+                    .padding(.bottom, 16)
+
+                    HStack(spacing: 8) {
+                        Rectangle()
+                            .fill(Color.black)
+                            .frame(width: 40, height: 3)
+
+                        Text("Mark Twain")
+                            .font(.faro(size: 14))
+                            .foregroundColor(.white.opacity(0.8))
+
+                        Rectangle()
+                            .fill(Color.black)
+                            .frame(width: 40, height: 3)
+                    }
+                }
+                .padding(.vertical, 48)
+                .padding(.horizontal, 40)
+            }
+            .background(Color.snapOrange)
+            .cornerRadius(24)
+            .shadow(color: Color.snapOrange.opacity(0.3), radius: 20, x: 0, y: 10)
+            .padding(.horizontal, 32)
+
+            Spacer()
+        }
+        .background(Color.snapLightBackground)
+        .onTapGesture {
+            withAnimation {
+                currentStep += 1
+            }
+        }
+    }
+
+    // MARK: - Q6: Forget Turn Off
+    var forgetTurnOffView: some View {
+        questionView(
+            title: "T'arrive-t-il d'éteindre\nl'alarme et de te rendormir\nsans t'en souvenir?",
+            options: ["Oui, souvent", "Parfois", "Rarement", "Jamais"],
+            selection: $forgetTurnOff
+        )
+    }
+
+    // MARK: - Q7: Life Difference
+    var lifeDifferenceView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 16)
+
+            Text("Si tu te levais à l'heure tous les matins, comment ta vie serait différente dans 3 mois?")
+                .font(.faroBold(size: 24))
+                .foregroundColor(.black)
+                .multilineTextAlignment(.leading)
+                .padding(.horizontal, 32)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 80)
+
+            VStack(spacing: 16) {
+                lifeDifferenceOption("Plus productif au travail", number: 1)
+                lifeDifferenceOption("Meilleure santé physique", number: 2)
+                lifeDifferenceOption("Moins de stress quotidien", number: 3)
+                lifeDifferenceOption("Plus de temps pour moi", number: 4)
+                lifeDifferenceOption("Relations améliorées", number: 5)
+            }
+            .padding(.horizontal, 32)
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(!lifeDifference.isEmpty ? Color.snapOrange : Color.gray.opacity(0.3))
+                    .cornerRadius(30)
+            }
+            .disabled(lifeDifference.isEmpty)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    func lifeDifferenceOption(_ text: String, number: Int) -> some View {
+        Button(action: {
+            lifeDifference = text
+        }) {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Color.snapOrange)
+                        .frame(width: 32, height: 32)
+
+                    Text("\(number)")
+                        .font(.faroBold(size: 15))
+                        .foregroundColor(.white)
+                }
+
+                Text(text)
+                    .font(.faro(size: 17))
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.vertical, 16)
+            .padding(.horizontal, 24)
+            .background(Color.white)
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(lifeDifference == text ? Color.snapOrange : Color.clear, lineWidth: 2)
+            )
+        }
+    }
+
+    // MARK: - Q8: Self Thought
+    var selfThoughtView: some View {
+        questionView(
+            title: "Que penses-tu de toi-même\nquand tu rates ton réveil?",
+            options: ["Je manque de discipline", "Je suis faible", "Je déçois les autres", "Je ne peux pas compter sur moi"],
+            selection: $selfThought
+        )
+    }
+
+    // MARK: - 🎯 Empathy View: We Understand
+    var empathyView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 40) {
+                // Emoji + title
+                VStack(spacing: 24) {
+                    MascotView(.guide, size: .medium)
+
+                    Text("Ce n'est pas\nde ta faute")
+                        .font(.faroBold(size: 42))
+                        .foregroundColor(.black)
+                        .multilineTextAlignment(.center)
+                }
+
+                // Explication scientifique
+                VStack(spacing: 20) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .top, spacing: 16) {
+                            Text("💤")
+                                .font(.system(size: 28))
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Inertie du sommeil")
+                                    .font(.faroBold(size: 18))
+                                    .foregroundColor(.black)
+                                Text("Ton cerveau a besoin de 15-30 minutes pour se réveiller complètement")
+                                    .font(.faro(size: 15))
+                                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                                    .lineSpacing(4)
+                            }
+                        }
+                        .padding(20)
+                        .background(Color.white)
+                        .cornerRadius(16)
+                        .shadow(color: Color.black.opacity(0.06), radius: 8, y: 4)
+
+                        HStack(alignment: .top, spacing: 16) {
+                            Text("🔄")
+                                .font(.system(size: 28))
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Habitudes ancrées")
+                                    .font(.faroBold(size: 18))
+                                    .foregroundColor(.black)
+                                Text("Snoozer est devenu un réflexe automatique après des années")
+                                    .font(.faro(size: 15))
+                                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                                    .lineSpacing(4)
+                            }
+                        }
+                        .padding(20)
+                        .background(Color.white)
+                        .cornerRadius(16)
+                        .shadow(color: Color.black.opacity(0.06), radius: 8, y: 4)
+                    }
+                    .padding(.horizontal, 32)
+
+                    // Science badge
+                    HStack(spacing: 12) {
+                        Image(systemName: "brain.head.profile")
+                            .font(.faroBold(size: 20))
+                            .foregroundColor(Color.snapOrange)
+
+                        Text("Validé par la neuroscience")
+                            .font(.faroBold(size: 15))
+                            .foregroundColor(Color.snapOrange)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 14)
+                    .background(Color.snapOrange.opacity(0.1))
+                    .cornerRadius(25)
+                }
+            }
+
+            Spacer()
+        }
+        .background(Color.snapLightBackground)
+        .onTapGesture {
+            withAnimation {
+                currentStep += 1
+            }
+        }
+    }
+
+    func empathyPoint(_ emoji: String, _ text: String) -> some View {
+        HStack(spacing: 16) {
+            Text(emoji)
+                .font(.faro(size: 28))
+
+            Text(text)
+                .font(.faro(size: 18))
+                .foregroundColor(Color.snapTextPrimary(for: colorScheme))
+                .multilineTextAlignment(.leading)
+
+            Spacer()
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(16)
+    }
+
+    // MARK: - Q9: Tries Count
+    var triesCountView: some View {
+        questionView(
+            title: "Combien de fois as-tu essayé\nde changer tes habitudes\nde réveil sans succès?",
+            options: ["Jamais", "1-2 fois", "3-5 fois", "Trop de fois", "J'ai tout essayé"],
+            selection: $triesCount
+        )
+    }
+
+    // MARK: - 🎯 Transformation Graphic: Before/After
+    var transformationGraphicView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            Text("One alarm.\nOne mission.")
+                .font(.faroBold(size: 32))
+                .foregroundColor(.black)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 40)
+
+            // Single white background card
+            HStack(alignment: .top, spacing: 24) {
+                // TYPICAL MORNING (Left)
+                VStack(spacing: 0) {
+                    Text("TYPICAL MORNING")
+                        .font(.faroBold(size: 11))
+                        .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+                        .padding(.bottom, 20)
+
+                    VStack(spacing: 0) {
+                        transformationStepWithArrow("bell.fill", "7:00", "Alarm", gradient: [Color(hex: "FFD700"), Color(hex: "FFA500")], index: 0, arrowColor: Color(hex: "FFA500"))
+                        transformationStepWithArrow("zzz", "7:09", "Snooze", gradient: [Color(hex: "FFA500"), Color(hex: "FF8C00")], index: 1, arrowColor: Color(hex: "FF8C00"))
+                        transformationStepWithArrow("zzz", "7:18", "Snooze", gradient: [Color(hex: "FF8C00"), Color(hex: "FF6347")], index: 2, arrowColor: Color(hex: "FF6347"))
+                        transformationStepWithArrow("exclamationmark.triangle.fill", "7:27", "Panic", gradient: [Color(hex: "FF6347"), Color(hex: "DC143C")], index: 3, arrowColor: nil)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+
+                // WAYK MORNING (Right)
+                VStack(spacing: 0) {
+                    Text("WAYK MORNING")
+                        .font(.faroBold(size: 11))
+                        .foregroundColor(Color(hex: "00C853"))
+                        .padding(.bottom, 20)
+
+                    VStack(spacing: 0) {
+                        transformationStepGreenWithArrow("bell.fill", "7:00", "Alarm", index: 4)
+                        transformationStepGreenWithArrow("checkmark.circle.fill", "7:01", "Mission", index: 5)
+                        transformationStepGreenWithArrow("sun.max.fill", "7:02", "Started", index: 6)
+                    }
+
+                    // 25 MINS GAINED
+                    VStack(spacing: 4) {
+                        Text("25 MINS")
+                            .font(.faroBold(size: 26))
+                            .foregroundColor(Color(hex: "00C853"))
+                        Text("GAINED")
+                            .font(.faroBold(size: 12))
+                            .foregroundColor(Color(hex: "00C853"))
+                    }
+                    .padding(.vertical, 14)
+                    .padding(.horizontal, 18)
+                    .background(Color(hex: "00C853").opacity(0.1))
+                    .cornerRadius(12)
+                    .padding(.top, 20)
+                    .opacity(showTransformationItems ? 1 : 0)
+                    .animation(.easeIn(duration: 0.3).delay(2.5), value: showTransformationItems)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 28)
+            .background(Color.white)
+            .cornerRadius(20)
+            .padding(.horizontal, 20)
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Color.snapOrange)
+                    .cornerRadius(30)
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+        .onAppear {
+            showTransformationItems = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                showTransformationItems = true
+            }
+        }
+        .onDisappear {
+            showTransformationItems = false
+        }
+    }
+
+    // Helper for transformation step WITH curved arrow (left side)
+    func transformationStepWithArrow(_ iconName: String, _ time: String, _ label: String, gradient: [Color], index: Int, arrowColor: Color?) -> some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 12) {
+                // Icon circle with gradient
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: gradient,
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 50, height: 50)
+
+                    Image(systemName: iconName)
+                        .font(.faroBold(size: 20))
+                        .foregroundColor(.white)
+                }
+                .opacity(showTransformationItems ? 1 : 0)
+                .scaleEffect(showTransformationItems ? 1 : 0.5)
+                .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(Double(index) * 0.4), value: showTransformationItems)
+
+                // Time and label
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(time)
+                        .font(.faroBold(size: 18))
+                        .foregroundColor(.black)
+
+                    Text(label)
+                        .font(.faro(size: 13))
+                        .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+                }
+                .opacity(showTransformationItems ? 1 : 0)
+                .animation(.easeIn(duration: 0.3).delay(Double(index) * 0.4 + 0.1), value: showTransformationItems)
+
+                Spacer()
+            }
+
+            // Curved arrow
+            if let arrowColor = arrowColor {
+                CurvedArrow(color: arrowColor)
+                    .frame(width: 30, height: 35)
+                    .padding(.leading, 10)
+                    .scaleEffect(y: showTransformationItems ? 1 : 0, anchor: .top)
+                    .opacity(showTransformationItems ? 1 : 0)
+                    .animation(.easeOut(duration: 0.4).delay(Double(index) * 0.4 + 0.3), value: showTransformationItems)
+            }
+        }
+    }
+
+    // Helper for transformation step WITH arrow (right side - green)
+    func transformationStepGreenWithArrow(_ iconName: String, _ time: String, _ label: String, index: Int) -> some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 12) {
+                // Green gradient icon
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "00E676"), Color(hex: "00C853")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 50, height: 50)
+
+                    Image(systemName: iconName)
+                        .font(.faroBold(size: 20))
+                        .foregroundColor(.white)
+                }
+                .opacity(showTransformationItems ? 1 : 0)
+                .scaleEffect(showTransformationItems ? 1 : 0.5)
+                .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(1.6 + Double(index - 4) * 0.3), value: showTransformationItems)
+
+                // Time and label
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(time)
+                        .font(.faroBold(size: 18))
+                        .foregroundColor(.black)
+
+                    Text(label)
+                        .font(.faro(size: 13))
+                        .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+                }
+                .opacity(showTransformationItems ? 1 : 0)
+                .animation(.easeIn(duration: 0.3).delay(1.6 + Double(index - 4) * 0.3 + 0.1), value: showTransformationItems)
+
+                Spacer()
+            }
+
+            // Green line connector (only for first 2)
+            if index < 6 {
+                Rectangle()
+                    .fill(Color(hex: "00C853"))
+                    .frame(width: 3, height: 25)
+                    .padding(.leading, 24)
+                    .scaleEffect(y: showTransformationItems ? 1 : 0, anchor: .top)
+                    .opacity(showTransformationItems ? 1 : 0)
+                    .animation(.easeOut(duration: 0.3).delay(1.6 + Double(index - 4) * 0.3 + 0.3), value: showTransformationItems)
+            }
+        }
+    }
+
+    // Curved arrow shape
+    struct CurvedArrow: View {
+        let color: Color
+
+        var body: some View {
+            Path { path in
+                path.move(to: CGPoint(x: 15, y: 0))
+                path.addQuadCurve(
+                    to: CGPoint(x: 20, y: 30),
+                    control: CGPoint(x: 25, y: 15)
+                )
+                // Arrow head
+                path.move(to: CGPoint(x: 20, y: 30))
+                path.addLine(to: CGPoint(x: 15, y: 25))
+                path.move(to: CGPoint(x: 20, y: 30))
+                path.addLine(to: CGPoint(x: 25, y: 25))
+            }
+            .stroke(color, lineWidth: 3)
+        }
+    }
+
+    func timelineItemBefore(_ iconName: String, _ text: String, showLine: Bool, index: Int) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(spacing: 0) {
+                ZStack {
+                    Circle()
+                        .fill(Color(hex: "FFE5E5"))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: iconName)
+                        .font(.faroBold(size: 18))
+                        .foregroundColor(.red)
+                }
+                .opacity(showTransformationItems ? 1 : 0)
+                .scaleEffect(showTransformationItems ? 1 : 0.5)
+                .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(Double(index) * 0.4), value: showTransformationItems)
+
+                if showLine {
+                    Rectangle()
+                        .fill(Color.red.opacity(0.3))
+                        .frame(width: 3, height: showTransformationItems ? 20 : 0)
+                        .animation(.easeInOut(duration: 0.3).delay(Double(index) * 0.4 + 0.2), value: showTransformationItems)
+                }
+            }
+
+            Text(text)
+                .font(.faro(size: 14))
+                .foregroundColor(.red)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .opacity(showTransformationItems ? 1 : 0)
+                .animation(.easeIn(duration: 0.3).delay(Double(index) * 0.4 + 0.1), value: showTransformationItems)
+        }
+    }
+
+    func timelineItemAfter(_ iconName: String, _ text: String, showLine: Bool, index: Int) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(spacing: 0) {
+                ZStack {
+                    Circle()
+                        .fill(Color(hex: "D4F4E8"))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: iconName)
+                        .font(.faroBold(size: 18))
+                        .foregroundColor(Color(hex: "00A86B"))
+                }
+                .opacity(showTransformationItems ? 1 : 0)
+                .scaleEffect(showTransformationItems ? 1 : 0.5)
+                .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(Double(index) * 0.4), value: showTransformationItems)
+
+                if showLine {
+                    Rectangle()
+                        .fill(Color(hex: "00A86B").opacity(0.3))
+                        .frame(width: 3, height: showTransformationItems ? 20 : 0)
+                        .animation(.easeInOut(duration: 0.3).delay(Double(index) * 0.4 + 0.2), value: showTransformationItems)
+                }
+            }
+
+            Text(text)
+                .font(.faro(size: 14))
+                .foregroundColor(Color(hex: "00A86B"))
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .opacity(showTransformationItems ? 1 : 0)
+                .animation(.easeIn(duration: 0.3).delay(Double(index) * 0.4 + 0.1), value: showTransformationItems)
+        }
+    }
+
+    func transformPoint(_ emoji: String, _ text: String, _ color: Color) -> some View {
+        HStack(spacing: 8) {
+            Text(emoji)
+                .font(.faro(size: 20))
+            Text(text)
+                .font(.faro(size: 14))
+                .foregroundColor(color)
+                .multilineTextAlignment(.leading)
+            Spacer()
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(color.opacity(0.1))
+        .cornerRadius(12)
+    }
+
+    // MARK: - Q10: Biggest Dream
+    var biggestDreamView: some View {
+        VStack(spacing: 24) {
+            Spacer().frame(height: 16)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Quel est ton plus grand rêve que tu pourrais réaliser si tu maîtrisais tes matins?")
+                    .font(.faro(size: 28))
+                    .foregroundColor(.black)
+
+                Text("Dis-nous ce qui te fait vibrer")
+                    .font(.faro(size: 15))
+                    .foregroundColor(.gray)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 32)
+
+            Spacer()
+
+            TextField("Écris ton rêve ici...", text: $biggestDream, axis: .vertical)
+                .font(.faro(size: 17))
+                .multilineTextAlignment(.center)
+                .textFieldStyle(.plain)
+                .lineLimit(3...6)
+                .padding()
+                .background(Color.white)
+                .cornerRadius(16)
+                .padding(.horizontal, 32)
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Skip")
+                    .font(.faro(size: 15))
+                    .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+            }
+            .padding(.bottom, 12)
+
+            Button(action: {
+                guard !biggestDream.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    return
+                }
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(biggestDream.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .white.opacity(0.5) : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(biggestDream.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray.opacity(0.3) : Color.snapOrange)
+                    .cornerRadius(30)
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    // MARK: - 🕐 Desired Wake Time
+    var desiredWakeTimeView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 32) {
+                VStack(spacing: 16) {
+                    Text("💪")
+                        .font(.system(size: 80))
+
+                    Text("À quelle heure veux-tu\nte lever demain?")
+                        .font(.faroBold(size: 32))
+                        .foregroundColor(.black)
+                        .multilineTextAlignment(.center)
+
+                    Text("C'est le premier jour de ta nouvelle vie.\nChoisis l'heure qui changera tout.")
+                        .font(.faro(size: 16))
+                        .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                }
+                .padding(.horizontal, 32)
+
+                DatePicker("", selection: $desiredWakeTime, displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 32)
+
+                VStack(spacing: 8) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "sunrise.fill")
+                            .font(.faro(size: 20))
+                            .foregroundColor(Color.snapOrange)
+                        Text("Ta nouvelle routine commence demain")
+                            .font(.faro(size: 14))
+                            .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(Color.snapOrange.opacity(0.1))
+                    .cornerRadius(20)
+                }
+            }
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("C'est parti ! 🚀")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(
+                        LinearGradient(
+                            colors: [Color.snapOrange, Color(hex: "FF8C00")],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(30)
+                    .shadow(color: Color.snapOrange.opacity(0.3), radius: 10, y: 5)
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    // MARK: - 🎯 Vision Board
+    var visionBoardView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 20)
+
+            // Lottie animation: Growing Plant en haut
+            LottieView(animationName: "Growing Plant", loopMode: .playOnce)
+                .frame(width: 180, height: 180)
+
+            Text("Visualise ta nouvelle vie")
+                .font(.faroBold(size: 28))
+                .foregroundColor(.black)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 24)
+
+            // Layout en bento box style
+            VStack(spacing: 10) {
+                // Première ligne - 2 grandes cards
+                HStack(spacing: 10) {
+                    visionCardLarge("bolt.fill", "Énergique", "Chaque matin", gradient: [Color(hex: "FFB84D"), Color(hex: "FF8C00")])
+                    visionCardLarge("target", "Productif", "Tous les jours", gradient: [Color(hex: "FF6B6B"), Color(hex: "FF4757")])
+                }
+
+                // Deuxième ligne - 3 petites cards
+                HStack(spacing: 10) {
+                    visionCardSmall("sparkles", "Confiant", gradient: [Color(hex: "FFD700"), Color(hex: "FFA500")])
+                    visionCardSmall("star.fill", "Ambitieux", gradient: [Color(hex: "00A86B"), Color(hex: "00D084")])
+                    visionCardSmall("figure.run", "Discipliné", gradient: [Color(hex: "9B59B6"), Color(hex: "8E44AD")])
+                }
+
+                // Troisième ligne - 1 grande card centrée
+                visionCardWide("sun.max.fill", "Épanoui", "Vraiment", gradient: [Color.snapOrange, Color(hex: "FF6347")])
+            }
+            .padding(.horizontal, 24)
+
+            Spacer()
+
+            Text("tape pour continuer")
+                .font(.faro(size: 15))
+                .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+                .padding(.bottom, 60)
+        }
+        .background(Color.snapLightBackground)
+        .onTapGesture {
+            withAnimation {
+                currentStep += 1
+            }
+        }
+    }
+
+    // Card large pour Énergique et Productif
+    func visionCardLarge(_ iconName: String, _ title: String, _ subtitle: String, gradient: [Color]) -> some View {
+        VStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: gradient,
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 50, height: 50)
+
+                Image(systemName: iconName)
+                    .font(.faroBold(size: 24))
+                    .foregroundColor(.white)
+            }
+
+            VStack(spacing: 4) {
+                Text(title)
+                    .font(.faroBold(size: 16))
+                    .foregroundColor(.black)
+
+                Text(subtitle)
+                    .font(.faro(size: 12))
+                    .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+        .background(Color.white)
+        .cornerRadius(20)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, y: 4)
+    }
+
+    // Card small pour Confiant, Ambitieux, Discipliné
+    func visionCardSmall(_ iconName: String, _ title: String, gradient: [Color]) -> some View {
+        VStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: gradient,
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 44, height: 44)
+
+                Image(systemName: iconName)
+                    .font(.faroBold(size: 20))
+                    .foregroundColor(.white)
+            }
+
+            Text(title)
+                .font(.faroBold(size: 14))
+                .foregroundColor(.black)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 18)
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, y: 4)
+    }
+
+    // Card wide pour Épanoui
+    func visionCardWide(_ iconName: String, _ title: String, _ subtitle: String, gradient: [Color]) -> some View {
+        HStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: gradient,
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 54, height: 54)
+
+                Image(systemName: iconName)
+                    .font(.faroBold(size: 26))
+                    .foregroundColor(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.faroBold(size: 18))
+                    .foregroundColor(.black)
+
+                Text(subtitle)
+                    .font(.faro(size: 13))
+                    .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        .background(Color.white)
+        .cornerRadius(20)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, y: 4)
+    }
+
+    // MARK: - Q12: Future Feeling
+    var futureFeelingView: some View {
+        questionView(
+            title: "Imagine-toi dans 6 mois,\nte levant systématiquement\nà l'heure.\nComment te sentirais-tu?",
+            options: ["Fier de moi", "Confiant", "Énergique", "En contrôle", "Accompli"],
+            selection: $futureFeeling
+        )
+    }
+
+    // MARK: - 🎯 Success Stories
+    var successStoriesView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 40) {
+                VStack(spacing: 24) {
+                    MascotView(.victoire, size: .medium)
+
+                    Text("Ils ont réussi,\ntoi aussi tu peux")
+                        .font(.faroBold(size: 42))
+                        .foregroundColor(.black)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+
+                // Témoignages rapides
+                VStack(spacing: 16) {
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 4) {
+                                ForEach(0..<5, id: \.self) { _ in
+                                    Image(systemName: "star.fill")
+                                        .font(.faro(size: 10))
+                                        .foregroundColor(Color(hex: "FFD700"))
+                                }
+                            }
+                            Text("\"Je me réveille du premier coup maintenant. Cocorise a changé ma vie !\"")
+                                .font(.faro(size: 14))
+                                .foregroundColor(Color.snapTextPrimary(for: colorScheme))
+                                .lineSpacing(4)
+                            Text("— Sarah, 28 ans")
+                                .font(.faro(size: 12))
+                                .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+                        }
+                        .padding(16)
+                        .background(Color.white)
+                        .cornerRadius(16)
+                        .shadow(color: Color.black.opacity(0.06), radius: 8, y: 4)
+                    }
+
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 4) {
+                                ForEach(0..<5, id: \.self) { _ in
+                                    Image(systemName: "star.fill")
+                                        .font(.faro(size: 10))
+                                        .foregroundColor(Color(hex: "FFD700"))
+                                }
+                            }
+                            Text("\"Plus besoin de 5 alarmes. Une mission et c'est bon, je suis debout !\"")
+                                .font(.faro(size: 14))
+                                .foregroundColor(Color.snapTextPrimary(for: colorScheme))
+                                .lineSpacing(4)
+                            Text("— Marc, 35 ans")
+                                .font(.faro(size: 12))
+                                .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+                        }
+                        .padding(16)
+                        .background(Color.white)
+                        .cornerRadius(16)
+                        .shadow(color: Color.black.opacity(0.06), radius: 8, y: 4)
+                    }
+                }
+                .padding(.horizontal, 32)
+
+                // Badge de confiance
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.faro(size: 24))
+                        .foregroundColor(Color(hex: "00A86B"))
+                    Text("+10 000 matins transformés")
+                        .font(.faroBold(size: 16))
+                        .foregroundColor(.black)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 14)
+                .background(Color.white)
+                .cornerRadius(25)
+                .shadow(color: Color.black.opacity(0.08), radius: 12, y: 4)
+            }
+
+            Spacer()
+        }
+        .background(Color.snapLightBackground)
+        .onTapGesture {
+            withAnimation {
+                currentStep += 1
+            }
+        }
+    }
+
+    func testimonialMini(_ name: String, _ text: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(name)
+                .font(.faroBold(size: 14))
+                .foregroundColor(Color.snapOrange)
+            Text(text)
+                .font(.faro(size: 15))
+                .foregroundColor(Color.snapTextPrimary(for: colorScheme))
+                .italic()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white)
+        .cornerRadius(12)
+    }
+
+    // MARK: - Step: Comparison (kept for visual education)
+    var comparisonView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 20)
+
+            Text("One alarm. One mission.")
+                .font(.faroBold(size: 34))
+                .foregroundColor(Color.snapOrange)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 40)
+
+            HStack(spacing: 0) {
+                VStack(spacing: 16) {
+                    Text("TYPICAL MORNING")
+                        .font(.faroBold(size: 11))
+                        .foregroundColor(.gray)
+
+                    VStack(spacing: 12) {
+                        timelineItem("🔔", "7:00", "Alarm", .orange)
+                        timelineLine(.orange, .orange)
+                        timelineItem("💤", "7:09", "Snooze", .orange)
+                        timelineLine(.orange, .red)
+                        timelineItem("💤", "7:18", "Snooze", .red)
+                        timelineLine(.red, .gray)
+                        timelineItem("⚠️", "7:27", "Panic", .red)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+
+                Rectangle()
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(width: 1)
+
+                VStack(spacing: 16) {
+                    Text("WAYK MORNING")
+                        .font(.faroBold(size: 11))
+                        .foregroundColor(Color(hex: "00A86B"))
+
+                    VStack(spacing: 12) {
+                        timelineItem("🔔", "7:00", "Alarm", Color(hex: "00A86B"))
+                        timelineLine(Color(hex: "00A86B"), Color(hex: "00A86B"))
+                        timelineItem("✅", "7:01", "Mission", Color(hex: "00A86B"))
+                        timelineLine(Color(hex: "00A86B"), Color(hex: "00A86B"))
+                        timelineItem("☀️", "7:02", "Started", Color(hex: "00A86B"))
+
+                        Spacer().frame(height: 20)
+
+                        VStack(spacing: 4) {
+                            Text("25 MINS")
+                                .font(.faroBold(size: 24))
+                                .foregroundColor(Color(hex: "00A86B"))
+                            Text("GAINED")
+                                .font(.faroBold(size: 11))
+                                .foregroundColor(Color(hex: "00A86B").opacity(0.6))
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(Color(hex: "00A86B").opacity(0.1))
+                        .cornerRadius(12)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding(20)
+            .background(Color.white)
+            .cornerRadius(20)
+            .padding(.horizontal, 32)
+
+            Spacer()
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    func timelineItem(_ emoji: String, _ time: String, _ label: String, _ color: Color) -> some View {
+        HStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.1))
+                    .frame(width: 36, height: 36)
+                Text(emoji)
+                    .font(.faro(size: 18))
+            }
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text(time)
+                    .font(.faroBold(size: 15))
+                    .foregroundColor(Color.snapOrange)
+                Text(label)
+                    .font(.faro(size: 13))
+                    .foregroundColor(.gray)
+            }
+        }
+    }
+
+    func timelineLine(_ from: Color, _ to: Color) -> some View {
+        Rectangle()
+            .fill(
+                LinearGradient(
+                    colors: [from, to],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .frame(width: 2, height: 20)
+            .offset(x: -30)
+    }
+
+    // MARK: - Energy Levels Explanation (kept for education)
+    var energyLevelsView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            Text("Wayk gets you out of bed")
+                .font(.faroBold(size: 34))
+                .foregroundColor(Color.snapOrange)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 40)
+
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Morning Energy Levels")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(Color.snapOrange)
+
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color(.systemGray6))
+                        .frame(height: 200)
+
+                    VStack {
+                        // Graph representation
+                        HStack(alignment: .bottom, spacing: 4) {
+                            ForEach(0..<7, id: \.self) { index in
+                                VStack {
+                                    Spacer()
+                                    if index < 3 {
+                                        // Snooze Cycle (red wavy line)
+                                        RoundedRectangle(cornerRadius: 2)
+                                            .fill(Color.red.opacity(0.3))
+                                            .frame(width: 40, height: CGFloat(40 + index * 10))
+                                    } else {
+                                        // Wayk Protocol (black ascending line)
+                                        RoundedRectangle(cornerRadius: 2)
+                                            .fill(Color.snapOrange)
+                                            .frame(width: 40, height: CGFloat(60 + (index - 3) * 30))
+                                    }
+                                }
+                            }
+                        }
+                        .frame(height: 150)
+
+                        HStack {
+                            Text("Snooze Cycle")
+                                .font(.faro(size: 13))
+                                .foregroundColor(.red)
+                            Text("GROGGY ZONE")
+                                .font(.faroBold(size: 11))
+                                .foregroundColor(.red.opacity(0.6))
+                            Spacer()
+                            Label("Wayk Protocol", systemImage: "bolt.fill")
+                                .font(.faro(size: 13))
+                                .foregroundColor(Color.snapOrange)
+                        }
+                        .padding(.horizontal, 8)
+                    }
+                    .padding()
+                }
+
+                Text("Avoid the 'groggy zone'. Wayk launches\nyou straight into alertness.")
+                    .font(.faro(size: 15))
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            }
+            .padding(.horizontal, 32)
+
+            Spacer()
+        }
+        .background(Color.snapLightBackground)
+    }
+
+
+    // MARK: - Mission Selection
+    var missionSelectionView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 20)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Choisis ta mission\nde réveil")
+                    .font(.faroBold(size: 34))
+                    .foregroundColor(.black)
+
+                Text("Tu devras la compléter pour éteindre l'alarme")
+                    .font(.faro(size: 17))
+                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+
+            ScrollView {
+                VStack(spacing: 16) {
+                    missionOption("figure.strengthtraining.traditional", "Pompes", "15 secondes de pompes", selectedMission == "Pompes", gradient: [Color(hex: "FF6B6B"), Color(hex: "FF4757")])
+                    missionOption("camera.fill", "Photo du ciel", "Prendre le ciel en photo", selectedMission == "Photo du ciel", gradient: [Color(hex: "4A90E2"), Color(hex: "357ABD")])
+                    missionOption("bed.double.fill", "Faire ton lit", "Montrer un lit fait", selectedMission == "Faire ton lit", gradient: [Color(hex: "9B59B6"), Color(hex: "8E44AD")])
+                    missionOption("book.fill", "Verset biblique", "Dire un court verset", selectedMission == "Verset biblique", gradient: [Color(hex: "F39C12"), Color(hex: "E67E22")])
+                    missionOption("sparkles", "Affirmation", "Lire une affirmation", selectedMission == "Affirmation", gradient: [Color(hex: "FFD700"), Color(hex: "FFA500")])
+                    missionOption("magnifyingglass", "Chasse à l'objet", "Trouver un objet", selectedMission == "Chasse à l'objet", gradient: [Color(hex: "00A86B"), Color(hex: "00D084")])
+                    missionOption("figure.walk", "Marcher", "Faire quelques pas", selectedMission == "Marcher", gradient: [Color.snapOrange, Color(hex: "FF8C00")])
+                    missionOption("brain.head.profile", "Problème de maths", "Résoudre un calcul", selectedMission == "Problème de maths", gradient: [Color(hex: "3498DB"), Color(hex: "2980B9")])
+                }
+                .padding(.horizontal, 32)
+            }
+
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    func missionOption(_ iconName: String, _ name: String, _ description: String, _ isSelected: Bool, gradient: [Color]) -> some View {
+        Button(action: {
+            selectedMission = name
+            withAnimation {
+                currentStep += 1
+            }
+        }) {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: gradient,
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 60, height: 60)
+
+                    Image(systemName: iconName)
+                        .font(.faroBold(size: 26))
+                        .foregroundColor(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(name)
+                        .font(.faroBold(size: 17))
+                        .foregroundColor(.black)
+                    Text(description)
+                        .font(.faro(size: 13))
+                        .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                }
+
+                Spacer()
+            }
+            .padding(16)
+            .background(Color.white)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? Color.snapOrange : Color.clear, lineWidth: 3)
+            )
+            .cornerRadius(16)
+            .shadow(color: isSelected ? Color.snapOrange.opacity(0.3) : Color.black.opacity(0.05), radius: isSelected ? 12 : 8, y: 4)
+        }
+    }
+
+
+    // MARK: - Sound Selection
+    var soundSelectionView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 20)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Choose your alarm sound")
+                    .font(.faroBold(size: 32))
+                    .foregroundColor(.black)
+
+                Text("Pick the sound that gets you up.")
+                    .font(.faro(size: 17))
+                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+
+            ScrollView {
+                VStack(spacing: 16) {
+                    soundCategoryGrouped(icon: "", title: "CLASSIC", sounds: ["Default", "Alarm Clock Bell", "UK Tea Timer"], colors: [Color(hex: "8E8E93"), Color(hex: "5E6C84"), Color(hex: "6B8E23")])
+
+                    soundCategoryGrouped(icon: "⚡", title: "AGGRESSIVE", sounds: ["Air Raid Siren", "Rooster Crowing"], colors: [Color(hex: "DC143C"), Color(hex: "8B4513")])
+
+                    soundCategoryGrouped(icon: "🧘", title: "PEACEFUL", sounds: ["Morning Birds", "Ocean Waves", "Zen Garden"], colors: [Color(hex: "87CEEB"), Color(hex: "4682B4"), Color(hex: "2E8B57")])
+                }
+                .padding(.horizontal, 32)
+            }
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Color.snapOrange)
+                    .cornerRadius(30)
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    func soundCategoryGrouped(icon: String, title: String, sounds: [String], colors: [Color]) -> some View {
+        VStack(spacing: 0) {
+            // Category header if exists
+            if !icon.isEmpty {
+                HStack(spacing: 8) {
+                    Text(icon)
+                        .font(.faro(size: 16))
+                    Text(title)
+                        .font(.faroBold(size: 13))
+                        .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+            }
+
+            // Grouped sound rows in white rectangle
+            VStack(spacing: 0) {
+                ForEach(Array(sounds.enumerated()), id: \.element) { index, sound in
+                    HStack(spacing: 16) {
+                        // Left: Icon circle
+                        Circle()
+                            .fill(colors[index])
+                            .frame(width: 50, height: 50)
+                            .overlay(
+                                Image(systemName: getSoundIcon(for: sound))
+                                    .font(.faroBold(size: 20))
+                                    .foregroundColor(.white)
+                            )
+
+                        // Sound name
+                        Text(sound)
+                            .font(.faro(size: 17))
+                            .foregroundColor(.black)
+
+                        Spacer()
+
+                        // Play button
+                        Button(action: {
+                            SoundManager.shared.previewSound(named: sound)
+                        }) {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                                .frame(width: 40, height: 40)
+                                .background(Color.snapLightCardSecondary)
+                                .clipShape(Circle())
+                        }
+
+                        // Toggle (circle)
+                        Button(action: {
+                            selectedSound = sound
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .stroke(selectedSound == sound ? Color.snapOrange : Color.snapDivider(for: colorScheme), lineWidth: 2)
+                                    .frame(width: 28, height: 28)
+
+                                if selectedSound == sound {
+                                    Circle()
+                                        .fill(Color.snapOrange)
+                                        .frame(width: 16, height: 16)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+
+                    // Separator line (except for last item)
+                    if index < sounds.count - 1 {
+                        Rectangle()
+                            .fill(Color.snapBorder(for: colorScheme))
+                            .frame(height: 1)
+                            .padding(.leading, 86)
+                    }
+                }
+            }
+            .background(Color.white)
+            .cornerRadius(12)
+        }
+    }
+
+    func getSoundIcon(for sound: String) -> String {
+        switch sound {
+        case "Default": return "bell.fill"
+        case "Alarm Clock": return "alarm.fill"
+        case "Reveille": return "music.note"
+        case "Sparkles": return "sparkles"
+        case "Mindful Earth": return "leaf.fill"
+        case "Dialed": return "phone.fill"
+        case "Rise And Shine": return "sunrise.fill"
+        case "Air Raid": return "exclamationmark.triangle.fill"
+        case "Rooster": return "bird.fill"
+        case "Pop Star": return "star.fill"
+        case "Sunray": return "sun.max.fill"
+        case "Jolly Day": return "face.smiling.fill"
+        case "London Town": return "building.2.fill"
+        default: return "bell.fill"
+        }
+    }
+
+    // MARK: - 🎉 Mission Congratulation
+    var missionCongratulationView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 32) {
+                MascotView(.victoire, size: .large)
+
+                Text("Félicitations\npour ton choix!")
+                    .font(.faroBold(size: 36))
+                    .foregroundColor(.black)
+                    .multilineTextAlignment(.center)
+
+                VStack(spacing: 16) {
+                    Text(selectedMission.isEmpty ? "Ta mission" : selectedMission)
+                        .font(.faroBold(size: 24))
+                        .foregroundColor(Color.snapOrange)
+
+                    Text(missionExplanations[selectedMission] ?? "Cette mission t'aidera à te réveiller efficacement.")
+                        .font(.faro(size: 17))
+                        .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(6)
+                        .padding(.horizontal, 40)
+                }
+                .padding(.vertical, 24)
+                .padding(.horizontal, 32)
+                .background(Color.white)
+                .cornerRadius(24)
+                .shadow(color: Color.black.opacity(0.05), radius: 20, y: 10)
+                .padding(.horizontal, 32)
+            }
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Color.snapOrange)
+                    .cornerRadius(30)
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    // MARK: - 🚀 Let's Try It Now
+    var letsTryItNowView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 40) {
+                // Mascotte challenge
+                MascotView(.challenge, size: .large)
+
+                VStack(spacing: 16) {
+                    Text("Let's try it\nright now!")
+                        .font(.faroBold(size: 42))
+                        .foregroundColor(.black)
+                        .multilineTextAlignment(.center)
+
+                    Text("Essaie ta mission maintenant pour voir\nsi elle te convient")
+                        .font(.faro(size: 17))
+                        .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                        .multilineTextAlignment(.center)
+                }
+            }
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Start Mission")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(
+                        LinearGradient(
+                            colors: [Color.snapOrange, Color(hex: "FF8C00")],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(30)
+                    .shadow(color: Color.snapOrange.opacity(0.3), radius: 10, y: 5)
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    // MARK: - 📸 Mission Camera View
+    var missionCameraView: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Header avec instruction et bouton X
+                HStack {
+                    Spacer()
+
+                    Text(getMissionInstruction(for: selectedMission))
+                        .font(.faro(size: 16))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+
+                    Spacer()
+
+                    Button(action: {
+                        withAnimation {
+                            currentStep += 1
+                        }
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.faroBold(size: 20))
+                            .foregroundColor(.white)
+                            .frame(width: 40, height: 40)
+                            .background(Color.white.opacity(0.2))
+                            .clipShape(Circle())
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 60)
+                .padding(.bottom, 20)
+
+                // Camera preview rectangle
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.gray.opacity(0.3))
+                    .overlay(
+                        VStack {
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 60))
+                                .foregroundColor(.white.opacity(0.5))
+                            Text("Camera Preview")
+                                .font(.faro(size: 16))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                    )
+                    .frame(height: 500)
+                    .padding(.horizontal, 20)
+
+                Spacer()
+
+                // Capture button
+                Button(action: {
+                    // TODO: Capture photo
+                    withAnimation {
+                        currentStep += 1
+                    }
+                }) {
+                    ZStack {
+                        Circle()
+                            .stroke(Color.white, lineWidth: 4)
+                            .frame(width: 80, height: 80)
+
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 68, height: 68)
+                    }
+                }
+                .padding(.bottom, 50)
+            }
+        }
+    }
+
+    // Helper functions pour les icônes de mission
+    func getMissionIcon(for mission: String) -> some View {
+        let (iconName, gradient) = getMissionIconInfo(for: mission)
+
+        return ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: gradient,
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 120, height: 120)
+
+            Image(systemName: iconName)
+                .font(.faroBold(size: 50))
+                .foregroundColor(.white)
+        }
+    }
+
+    func getMissionIconInfo(for mission: String) -> (String, [Color]) {
+        switch mission {
+        case "Pompes":
+            return ("figure.strengthtraining.traditional", [Color(hex: "FF6B6B"), Color(hex: "FF4757")])
+        case "Photo du ciel":
+            return ("camera.fill", [Color(hex: "4A90E2"), Color(hex: "357ABD")])
+        case "Faire ton lit":
+            return ("bed.double.fill", [Color(hex: "9B59B6"), Color(hex: "8E44AD")])
+        case "Verset biblique":
+            return ("book.fill", [Color(hex: "F39C12"), Color(hex: "E67E22")])
+        case "Affirmation":
+            return ("sparkles", [Color(hex: "FFD700"), Color(hex: "FFA500")])
+        case "Chasse à l'objet":
+            return ("magnifyingglass", [Color(hex: "00A86B"), Color(hex: "00D084")])
+        case "Marcher":
+            return ("figure.walk", [Color.snapOrange, Color(hex: "FF8C00")])
+        case "Problème de maths":
+            return ("brain.head.profile", [Color(hex: "3498DB"), Color(hex: "2980B9")])
+        default:
+            return ("star.fill", [Color.snapOrange, Color(hex: "FF8C00")])
+        }
+    }
+
+    func getMissionInstruction(for mission: String) -> String {
+        switch mission {
+        case "Pompes":
+            return "Fais 15 secondes de pompes"
+        case "Photo du ciel":
+            return "Prends le ciel en photo"
+        case "Faire ton lit":
+            return "Montre un lit fait"
+        case "Verset biblique":
+            return "Dis un court verset"
+        case "Affirmation":
+            return "Lis une affirmation"
+        case "Chasse à l'objet":
+            return "Trouve un objet"
+        case "Marcher":
+            return "Fais quelques pas"
+        case "Problème de maths":
+            return "Résous un calcul"
+        default:
+            return "Complète ta mission"
+        }
+    }
+
+    // MARK: - Days Selection
+    var daysSelectionView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 20)
+
+            Text("Quels jours veux-tu que\nCocorise sonne?")
+                .font(.faroBold(size: 24))
+                .foregroundColor(.black)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 20)
+
+            VStack(spacing: 16) {
+                ForEach(["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"], id: \.self) { day in
+                    Button(action: {
+                        if selectedDays.contains(day) {
+                            selectedDays.remove(day)
+                        } else {
+                            selectedDays.insert(day)
+                        }
+                    }) {
+                        HStack(spacing: 16) {
+                            ZStack {
+                                Circle()
+                                    .stroke(selectedDays.contains(day) ? Color.snapOrange : Color.snapDivider(for: colorScheme), lineWidth: 2)
+                                    .frame(width: 28, height: 28)
+
+                                if selectedDays.contains(day) {
+                                    Circle()
+                                        .fill(Color.snapOrange)
+                                        .frame(width: 28, height: 28)
+
+                                    Image(systemName: "checkmark")
+                                        .font(.faroBold(size: 12))
+                                        .foregroundColor(.white)
+                                }
+                            }
+
+                            Text(day)
+                                .font(.faro(size: 17))
+                                .foregroundColor(.black)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 24)
+                        .background(selectedDays.contains(day) ? Color.white : Color.snapOrange.opacity(0.15))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 40)
+                                .stroke(Color.snapOrange, lineWidth: selectedDays.contains(day) ? 2 : 0)
+                        )
+                        .cornerRadius(40)
+                    }
+                }
+            }
+            .padding(.horizontal, 32)
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(!selectedDays.isEmpty ? Color.snapOrange : Color.gray.opacity(0.3))
+                    .cornerRadius(30)
+            }
+            .disabled(selectedDays.isEmpty)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    // MARK: - Q11: Commitment (replaces old commitment)
+    var commitmentView: some View {
+        questionView(
+            title: "Es-tu prêt à t'engager\npour devenir une\npersonne du matin?",
+            options: ["Déterminé", "Sérieusement", "Je veux voir", "Pas sûr"],
+            selection: $commitment
+        )
+    }
+
+    // MARK: - 🎯 Quote 3: Final Motivation
+    var quoteView3: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            ZStack {
+                // Lottie animation: shining stars en arrière-plan
+                LottieView(animationName: "shining stars", loopMode: .playOnce)
+                    .frame(width: 200, height: 200)
+                    .opacity(0.3)
+
+                VStack(spacing: 0) {
+                    HStack(alignment: .top) {
+                        Text("\"")
+                            .font(.faroBold(size: 60))
+                            .foregroundColor(.white.opacity(0.3))
+                        Spacer()
+                    }
+
+                    VStack(spacing: 0) {
+                        Text("Tu es à une décision")
+                            .font(.faro(size: 22))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+
+                        Text("de changer ta vie.")
+                            .font(.faro(size: 22))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    HStack(alignment: .bottom) {
+                        Spacer()
+                        Text("\"")
+                            .font(.faroBold(size: 60))
+                            .foregroundColor(.white.opacity(0.3))
+                    }
+                    .padding(.bottom, 16)
+
+                    Text("Cette décision, c'est maintenant.")
+                        .font(.faro(size: 16))
+                        .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.vertical, 56)
+                .padding(.horizontal, 40)
+            }
+            .background(Color.snapOrange)
+            .cornerRadius(24)
+            .shadow(color: Color.snapOrange.opacity(0.3), radius: 20, x: 0, y: 10)
+            .padding(.horizontal, 32)
+
+            Spacer()
+        }
+        .background(Color.snapLightBackground)
+        .onTapGesture {
+            withAnimation {
+                currentStep += 1
+            }
+        }
+    }
+
+    // MARK: - Summary
+    var summaryView: some View {
+        VStack(spacing: 40) {
+            Spacer()
+
+            Text("🎯")
+                .font(.system(size: 80))
+
+            VStack(spacing: 16) {
+                Text("Récapitulatif de ton plan")
+                    .font(.faroBold(size: 32))
+                    .foregroundColor(Color.snapOrange)
+                    .multilineTextAlignment(.center)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 16) {
+                        Image(systemName: "target")
+                            .font(.faro(size: 20))
+                        VStack(alignment: .leading) {
+                            Text("Ton rêve")
+                                .font(.faro(size: 13))
+                                .foregroundColor(.gray)
+                            Text(biggestDream.isEmpty ? "Devenir meilleur" : String(biggestDream.prefix(40)))
+                                .font(.faroBold(size: 16))
+                                .lineLimit(2)
+                        }
+                        Spacer()
+                    }
+
+                    HStack(spacing: 16) {
+                        Image(systemName: "figure.strengthtraining.traditional")
+                            .font(.faro(size: 20))
+                        VStack(alignment: .leading) {
+                            Text("Ta mission")
+                                .font(.faro(size: 13))
+                                .foregroundColor(.gray)
+                            Text(selectedMission.isEmpty ? "Faire ton lit" : selectedMission)
+                                .font(.faroBold(size: 16))
+                        }
+                        Spacer()
+                    }
+
+                    HStack(spacing: 16) {
+                        Image(systemName: "flame.fill")
+                            .font(.faro(size: 20))
+                        VStack(alignment: .leading) {
+                            Text("Ton engagement")
+                                .font(.faro(size: 13))
+                                .foregroundColor(.gray)
+                            Text(commitment.isEmpty ? "Déterminé" : commitment)
+                                .font(.faroBold(size: 16))
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                    }
+                }
+                .foregroundColor(Color.snapOrange)
+                .padding(24)
+                .background(Color.white)
+                .cornerRadius(16)
+                .padding(.horizontal, 32)
+            }
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                HStack {
+                    Image(systemName: "rocket.fill")
+                    Text("C'est parti ! 🚀")
+                }
+                .font(.faroBold(size: 17))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 18)
+                .background(
+                    LinearGradient(
+                        colors: [Color.snapOrange, Color(hex: "FF8C00")],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .cornerRadius(30)
+                .shadow(color: Color.snapOrange.opacity(0.3), radius: 10, y: 5)
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    // MARK: - Loading
+    var loadingView: some View {
+        VStack(spacing: 40) {
+            Spacer()
+
+            Text("\(Int(loadingProgress))%")
+                .font(.faroBold(size: 80))
+                .foregroundColor(Color.snapOrange)
+
+            Text("On prépare tout\npour toi...")
+                .font(.faroBold(size: 28))
+                .foregroundColor(Color.snapOrange)
+                .multilineTextAlignment(.center)
+
+            ProgressView(value: loadingProgress, total: 100)
+                .tint(LinearGradient(colors: [.orange, .pink, .purple], startPoint: .leading, endPoint: .trailing))
+                .scaleEffect(y: 2)
+                .padding(.horizontal, 32)
+
+            Text(loadingProgress < 30 ? "Configuration de tes objectifs..." :
+                 loadingProgress < 60 ? "Préparation de ta mission..." :
+                 loadingProgress < 80 ? "Paramétrage du son d'alarme..." :
+                 "Planification de ton alarme...")
+                .font(.faro(size: 15))
+                .foregroundColor(.gray)
+
+            VStack(alignment: .leading, spacing: 12) {
+                progressItem("Configuration de tes objectifs", loadingProgress >= 30)
+                progressItem("Préparation de ta mission", loadingProgress >= 60)
+                progressItem("Paramétrage du son d'alarme", loadingProgress >= 80)
+                progressItem("Planification de ton alarme", loadingProgress >= 90)
+                progressItem("Création de ton compte", loadingProgress >= 100)
+            }
+            .padding(24)
+            .background(Color(.systemGray6))
+            .cornerRadius(16)
+            .padding(.horizontal, 32)
+
+            Spacer()
+        }
+        .background(Color.snapLightBackground)
+        .onAppear {
+            animateLoading()
+        }
+    }
+
+    func progressItem(_ text: String, _ isDone: Bool) -> some View {
+        HStack {
+            Text(text)
+                .font(.faro(size: 15))
+                .foregroundColor(isDone ? Color.snapOrange : .gray)
+            Spacer()
+            Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
+                .foregroundColor(isDone ? .green : .gray)
+        }
+    }
+
+    func animateLoading() {
+        withAnimation(.linear(duration: 4.0)) {
+            loadingProgress = 100
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.5) {
+            withAnimation {
+                currentStep += 1
+            }
+        }
+    }
+
+    // MARK: - Finish
+    // MARK: - Rating with Social Proof
+    var ratingWithSocialProofView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 32) {
+                Text("⭐️⭐️⭐️⭐️⭐️")
+                    .font(.system(size: 50))
+
+                Text("Join 50,000+ people who\ntransformed their mornings")
+                    .font(.faroBold(size: 26))
+                    .foregroundColor(.black)
+                    .multilineTextAlignment(.center)
+
+                VStack(spacing: 16) {
+                    ratingCard(
+                        stars: 5,
+                        text: "\"This app literally changed my life. I wake up at 6am now without struggle.\"",
+                        author: "Sarah, 28"
+                    )
+
+                    ratingCard(
+                        stars: 5,
+                        text: "\"No more snoozing! The missions make it impossible to go back to bed.\"",
+                        author: "Michael, 34"
+                    )
+
+                    ratingCard(
+                        stars: 5,
+                        text: "\"I've gained 2 hours every morning. Best decision ever.\"",
+                        author: "Emma, 25"
+                    )
+                }
+                .padding(.horizontal, 24)
+            }
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Color.snapOrange)
+                    .cornerRadius(30)
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    func ratingCard(stars: Int, text: String, author: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 4) {
+                ForEach(0..<stars, id: \.self) { _ in
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.snapOrange)
+                }
+            }
+
+            Text(text)
+                .font(.faro(size: 15))
+                .foregroundColor(.black)
+
+            Text(author)
+                .font(.faro(size: 13))
+                .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white)
+        .cornerRadius(16)
+    }
+
+    // MARK: - Stay on Track with Notifications
+    var stayOnTrackNotificationView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 32) {
+                Text("🔔")
+                    .font(.system(size: 80))
+
+                VStack(spacing: 16) {
+                    Text("Stay on track with reminders")
+                        .font(.faroBold(size: 32))
+                        .foregroundColor(.black)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+
+                    Text("We'll send a gentle nudge so you never miss your wake-up time.")
+                        .font(.faro(size: 17))
+                        .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 16) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.black)
+                                .frame(width: 48, height: 48)
+                            Image(systemName: "alarm.fill")
+                                .font(.faroBold(size: 20))
+                                .foregroundColor(.white)
+                        }
+                        Text("Wake-up time reminders")
+                            .font(.faro(size: 17))
+                            .foregroundColor(.black)
+                        Spacer()
+                    }
+
+                    HStack(spacing: 16) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.black)
+                                .frame(width: 48, height: 48)
+                            Image(systemName: "flame.fill")
+                                .font(.faroBold(size: 20))
+                                .foregroundColor(.white)
+                        }
+                        Text("Streak protection alerts")
+                            .font(.faro(size: 17))
+                            .foregroundColor(.black)
+                        Spacer()
+                    }
+
+                    HStack(spacing: 16) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.black)
+                                .frame(width: 48, height: 48)
+                            Image(systemName: "chart.line.uptrend.xyaxis")
+                                .font(.faroBold(size: 20))
+                                .foregroundColor(.white)
+                        }
+                        Text("Weekly progress updates")
+                            .font(.faro(size: 17))
+                            .foregroundColor(.black)
+                        Spacer()
+                    }
+                }
+                .padding(.horizontal, 32)
+            }
+
+            Spacer()
+
+            VStack(spacing: 16) {
+                Button(action: {
+                    // Request notification permission
+                    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                        DispatchQueue.main.async {
+                            withAnimation {
+                                currentStep += 1
+                            }
+                        }
+                    }
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "bell.fill")
+                            .font(.faroBold(size: 16))
+                        Text("Enable Reminders")
+                            .font(.faroBold(size: 17))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Color.black)
+                    .cornerRadius(30)
+                }
+                .padding(.horizontal, 32)
+
+                Button(action: {
+                    withAnimation {
+                        currentStep += 1
+                    }
+                }) {
+                    Text("Not now")
+                        .font(.faro(size: 17))
+                        .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+                }
+                .padding(.bottom, 40)
+            }
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    // MARK: - Request Tracking
+    var requestTrackingView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 40) {
+                Text("Allow tracking on\nthe next screen for:")
+                    .font(.faroBold(size: 32))
+                    .foregroundColor(.black)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+
+                VStack(alignment: .leading, spacing: 24) {
+                    HStack(alignment: .top, spacing: 16) {
+                        Text("📊")
+                            .font(.system(size: 40))
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Personalized wake-up insights tailored to you.")
+                                .font(.faro(size: 17))
+                                .foregroundColor(.black)
+                        }
+                    }
+
+                    HStack(alignment: .top, spacing: 16) {
+                        Text("🎯")
+                            .font(.system(size: 40))
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Better recommendations to improve your mornings.")
+                                .font(.faro(size: 17))
+                                .foregroundColor(.black)
+                        }
+                    }
+
+                    HStack(alignment: .top, spacing: 16) {
+                        Text("⚙️")
+                            .font(.system(size: 40))
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("You can change this anytime in Settings.")
+                                .font(.faro(size: 17))
+                                .foregroundColor(.black)
+                        }
+                    }
+                }
+                .padding(.horizontal, 32)
+            }
+
+            Spacer()
+
+            Button(action: {
+                // Request tracking permission (iOS 14.5+)
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Next")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Color.black)
+                    .cornerRadius(30)
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    // MARK: - Wake History Card Selection
+    var wakeHistoryCardView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 20)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Choose your wake\nhistory card")
+                    .font(.faroBold(size: 24))
+                    .foregroundColor(.black)
+
+                Text("This becomes your proof after every successful wake up.")
+                    .font(.faro(size: 17))
+                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 32)
+
+            ScrollView {
+                VStack(spacing: 20) {
+                    wakeHistoryCardOption("Default", streak: 14, date: "Sat, Mar 7", wakeTime: "7:30", wakeNumber: 42)
+                    wakeHistoryCardOption("Morning Glory", streak: 14, date: "Sat, Mar 7", wakeTime: "7:30", wakeNumber: 42)
+                    wakeHistoryCardOption("Night Owl", streak: 14, date: "Sat, Mar 7", wakeTime: "7:30", wakeNumber: 42)
+                    wakeHistoryCardOption("Fresh Start", streak: 14, date: "Sat, Mar 7", wakeTime: "7:30", wakeNumber: 42)
+                    wakeHistoryCardOption("Fire", streak: 14, date: "Sat, Mar 7", wakeTime: "7:30", wakeNumber: 42)
+                    wakeHistoryCardOption("Ocean", streak: 14, date: "Sat, Mar 7", wakeTime: "7:30", wakeNumber: 42)
+                }
+                .padding(.horizontal, 32)
+            }
+
+            HStack(spacing: 8) {
+                ForEach(0..<6, id: \.self) { index in
+                    Circle()
+                        .fill(index == 0 ? Color.black : Color.snapDivider(for: colorScheme))
+                        .frame(width: 8, height: 8)
+                }
+            }
+            .padding(.vertical, 16)
+
+            Text(wakeHistoryCard.isEmpty ? "" : wakeHistoryCard)
+                .font(.faro(size: 17))
+                .foregroundColor(Color(hex: "666666"))
+                .padding(.bottom, 16)
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(!wakeHistoryCard.isEmpty ? Color.snapOrange : Color.gray.opacity(0.3))
+                    .cornerRadius(30)
+            }
+            .disabled(wakeHistoryCard.isEmpty)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    func wakeHistoryCardOption(_ title: String, streak: Int, date: String, wakeTime: String, wakeNumber: Int) -> some View {
+        Button(action: {
+            wakeHistoryCard = title
+        }) {
+            VStack(spacing: 0) {
+                // Header avec streak et date
+                HStack {
+                    HStack(spacing: 4) {
+                        Text("🔥")
+                            .font(.system(size: 16))
+                        Text("\(streak)")
+                            .font(.faroBold(size: 16))
+                            .foregroundColor(.black)
+                    }
+
+                    Spacer()
+
+                    Text(date)
+                        .font(.faro(size: 14))
+                        .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 20)
+                .padding(.bottom, 40)
+
+                // Wake up time - grand
+                VStack(spacing: 8) {
+                    Text("WAKE UP TIME")
+                        .font(.faroBold(size: 12))
+                        .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+                        .tracking(1)
+
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(wakeTime)
+                            .font(.faroBold(size: 72))
+                            .foregroundColor(.black)
+                        Text("am")
+                            .font(.faro(size: 20))
+                            .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+                    }
+                }
+                .padding(.bottom, 50)
+
+                // Wake number
+                Text("Wake #\(wakeNumber)")
+                    .font(.faro(size: 16))
+                    .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+                    .padding(.bottom, 20)
+            }
+            .frame(maxWidth: .infinity)
+            .background(Color.white)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(wakeHistoryCard == title ? Color.snapOrange : Color.clear, lineWidth: 3)
+            )
+            .cornerRadius(20)
+            .shadow(color: Color.black.opacity(0.06), radius: 8, y: 4)
+        }
+    }
+
+    // MARK: - Heard About Us
+    var heardAboutUsView: some View {
+        questionView(
+            title: "How did you hear\nabout Cocorise?",
+            options: [
+                "TikTok",
+                "Instagram",
+                "Friend recommendation",
+                "App Store search",
+                "YouTube",
+                "Other"
+            ],
+            selection: $heardAboutUs
+        )
+    }
+
+    // MARK: - Quote: Win the Morning
+    var quoteWinTheMorningView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 40) {
+                Text("\"\"")
+                    .font(.faroBold(size: 80))
+                    .foregroundColor(Color.snapBorder(for: colorScheme))
+
+                VStack(spacing: 8) {
+                    Text("If you win")
+                        .font(.faroBold(size: 42))
+                        .foregroundColor(.black)
+
+                    Text("the morning,")
+                        .font(.faroBold(size: 42))
+                        .foregroundColor(.black)
+
+                    Text("you win the day.")
+                        .font(.faroBold(size: 42))
+                        .foregroundColor(.black)
+                }
+                .multilineTextAlignment(.center)
+
+                Text("— Tim Ferriss")
+                    .font(.faro(size: 18))
+                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+            }
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Color.snapOrange)
+                    .cornerRadius(30)
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    // MARK: - Ready to Become a Morning Person
+    var readyToBecomeView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 32) {
+                // Mascotte encouragement
+                MascotView(.encouragement, size: .large)
+
+                Text("Ready to become a\nmorning person?")
+                    .font(.faroBold(size: 32))
+                    .foregroundColor(.black)
+                    .multilineTextAlignment(.center)
+
+                // Card avec icônes et infos
+                VStack(spacing: 12) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.black)
+                                .frame(width: 40, height: 40)
+
+                            Image(systemName: "alarm.fill")
+                                .font(.faroBold(size: 18))
+                                .foregroundColor(.white)
+                        }
+
+                        Text("Wake up at")
+                            .font(.faro(size: 18))
+                            .foregroundColor(.black)
+
+                        Spacer()
+
+                        let formatter = DateFormatter()
+                        let _ = formatter.dateFormat = "HH:mm"
+
+                        Text(formatter.string(from: desiredWakeTime))
+                            .font(.faroBold(size: 22))
+                            .foregroundColor(.black)
+                    }
+
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.black)
+                                .frame(width: 40, height: 40)
+
+                            Image(systemName: "bed.double.fill")
+                                .font(.faroBold(size: 18))
+                                .foregroundColor(.white)
+                        }
+
+                        Text("Mission")
+                            .font(.faro(size: 18))
+                            .foregroundColor(.black)
+
+                        Spacer()
+
+                        Text(selectedMission.isEmpty ? "make your bed" : selectedMission)
+                            .font(.faroBold(size: 18))
+                            .foregroundColor(.black)
+                    }
+                }
+                .padding(20)
+                .background(Color.snapLightBackground)
+                .cornerRadius(16)
+                .padding(.horizontal, 32)
+            }
+
+            Spacer()
+
+            // 2 boutons
+            VStack(spacing: 16) {
+                Button(action: {
+                    withAnimation {
+                        currentStep += 1
+                    }
+                }) {
+                    Text("I'm all in")
+                        .font(.faroBold(size: 17))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(Color.black)
+                        .cornerRadius(30)
+                }
+
+                Button(action: {
+                    withAnimation {
+                        currentStep += 1
+                    }
+                }) {
+                    Text("I'll give it my best")
+                        .font(.faroBold(size: 17))
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(Color.white)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 30)
+                                .stroke(Color.black, lineWidth: 2)
+                        )
+                        .cornerRadius(30)
+                }
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    // MARK: - Signature Commitment
+    var signatureCommitmentView: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 20)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Make the commitment")
+                    .font(.faroBold(size: 32))
+                    .foregroundColor(.black)
+
+                let formatter = DateFormatter()
+                let _ = formatter.dateFormat = "HH:mm"
+
+                Text("Sign to wake up at \(formatter.string(from: desiredWakeTime)) when the alarm rings.")
+                    .font(.faro(size: 17))
+                    .foregroundColor(Color.snapTextSecondary(for: colorScheme))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 32)
+
+            Spacer()
+
+            // Zone de signature (canvas blanc)
+            ZStack {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.white)
+                    .frame(height: 250)
+
+                if userSignature.isEmpty {
+                    Text("Draw your signature here")
+                        .font(.faro(size: 16))
+                        .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+                } else {
+                    // Simulation d'une ligne de signature
+                    Path { path in
+                        path.move(to: CGPoint(x: 80, y: 150))
+                        path.addCurve(
+                            to: CGPoint(x: 500, y: 120),
+                            control1: CGPoint(x: 200, y: 180),
+                            control2: CGPoint(x: 350, y: 100)
+                        )
+                    }
+                    .stroke(Color.black, lineWidth: 3)
+                }
+            }
+            .padding(.horizontal, 32)
+            .onTapGesture {
+                // Simuler qu'on a signé
+                userSignature = "signed"
+            }
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    currentStep += 1
+                }
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark")
+                        .font(.faroBold(size: 16))
+
+                    Text("I Commit")
+                        .font(.faroBold(size: 17))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 18)
+                .background(Color.black)
+                .cornerRadius(30)
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    // MARK: - Plan Creation (0-100%)
+    var planCreationView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 24) {
+                Text("\(Int(planCreationProgress))%")
+                    .font(.faroBold(size: 72))
+                    .foregroundColor(.black)
+
+                Text("We're setting everything\nup for you")
+                    .font(.faroBold(size: 28))
+                    .foregroundColor(.black)
+                    .multilineTextAlignment(.center)
+
+                // Progress bar
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.snapBorder(for: colorScheme))
+                            .frame(height: 8)
+
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.snapOrange,
+                                        Color(hex: "FF6B9D"),
+                                        Color(hex: "C44569"),
+                                        Color(hex: "A55FCC")
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: geometry.size.width * (planCreationProgress / 100), height: 8)
+                    }
+                }
+                .frame(height: 8)
+                .padding(.horizontal, 32)
+
+                Text("Finishing up...")
+                    .font(.faro(size: 16))
+                    .foregroundColor(Color.snapTextTertiary(for: colorScheme))
+
+                // Checklist
+                VStack(spacing: 16) {
+                    planCreationItem("Configuring your goals", isComplete: planCreationProgress > 20)
+                    planCreationItem("Setting your mission", isComplete: planCreationProgress > 40)
+                    planCreationItem("Setting alarm tone", isComplete: planCreationProgress > 60)
+                    planCreationItem("Scheduling your alarm", isComplete: planCreationProgress > 80)
+                    planCreationItem("Setting up wake receipt", isComplete: planCreationProgress > 95)
+                }
+                .padding(24)
+                .background(Color.white.opacity(0.5))
+                .cornerRadius(20)
+                .padding(.horizontal, 32)
+            }
+
+            Spacer()
+        }
+        .background(Color.snapLightBackground)
+        .onAppear {
+            animatePlanCreation()
+        }
+    }
+
+    func planCreationItem(_ text: String, isComplete: Bool) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(isComplete ? Color(hex: "4CAF50") : Color(hex: "E0E0E0"))
+                    .frame(width: 24, height: 24)
+
+                if isComplete {
+                    Image(systemName: "checkmark")
+                        .font(.faroBold(size: 12))
+                        .foregroundColor(.white)
+                }
+            }
+
+            Text(text)
+                .font(.faro(size: 16))
+                .foregroundColor(.black)
+
+            Spacer()
+        }
+    }
+
+    func animatePlanCreation() {
+        planCreationProgress = 0
+
+        Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { timer in
+            if planCreationProgress < 100 {
+                planCreationProgress += 1
+            } else {
+                timer.invalidate()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    withAnimation {
+                        currentStep += 1
+                    }
+                }
+            }
+        }
+    }
+
+    var finishView: some View {
+        VStack {
+            Spacer()
+            Text("All set! 🎉")
+                .font(.faroBold(size: 40))
+            Spacer()
+        }
+        .onAppear {
+            finishOnboarding()
+        }
+    }
+
+    // MARK: - Helper Views
+    func questionView(title: String, options: [String], selection: Binding<String>, isLast: Bool = false) -> some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 20)
+
+            Text(title)
+                .font(.faroBold(size: 24))
+                .foregroundColor(.black)
+                .multilineTextAlignment(.leading)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .opacity))
+
+            VStack(spacing: 16) {
+                ForEach(Array(options.enumerated()), id: \.element) { index, option in
+                    optionButton(option, number: index + 1, isSelected: selection.wrappedValue == option) {
+                        selection.wrappedValue = option
+                    }
+                    .transition(.asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity), removal: .opacity))
+                    .animation(.easeOut(duration: 0.3).delay(Double(index) * 0.08), value: currentStep)
+                }
+            }
+            .padding(.horizontal, 32)
+
+            Spacer()
+
+            Button(action: {
+                withAnimation {
+                    if isLast {
+                        finishOnboarding()
+                    } else {
+                        currentStep += 1
+                    }
+                }
+            }) {
+                Text("Continue")
+                    .font(.faroBold(size: 17))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(!selection.wrappedValue.isEmpty ? Color.snapOrange : Color.gray.opacity(0.3))
+                    .cornerRadius(30)
+            }
+            .disabled(selection.wrappedValue.isEmpty)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+        .background(Color.snapLightBackground)
+    }
+
+    func optionButton(_ text: String, number: Int = 0, isSelected: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                if number > 0 {
+                    ZStack {
+                        Circle()
+                            .fill(Color.snapOrange)
+                            .frame(width: 32, height: 32)
+
+                        Text("\(number)")
+                            .font(.faroBold(size: 15))
+                            .foregroundColor(.white)
+                    }
+                }
+
+                Text(text)
+                    .font(.faro(size: 17))
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.vertical, 16)
+            .padding(.horizontal, 24)
+            .background(Color.white)
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(isSelected ? Color.snapOrange : Color.clear, lineWidth: 2)
+            )
+        }
+    }
+
+    func continueButton(enabled: Bool) -> some View {
+        Button(action: {
+            withAnimation {
+                currentStep += 1
+            }
+        }) {
+            Text("Continue")
+                .font(.faroBold(size: 17))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 18)
+                .background(enabled ? Color.snapOrange : Color.snapDivider(for: colorScheme))
+                .cornerRadius(30)
+        }
+        .disabled(!enabled)
+        .padding(.horizontal, 32)
+        .padding(.bottom, 40)
+    }
+
+    // MARK: - Animations
+    func advanceToAnimation() {
+        withAnimation {
+            currentStep = 1
+        }
+    }
+
+    func finishOnboarding() {
+        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+
+        Task {
+            await alarmManager.requestNotificationPermission()
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            withAnimation {
+                isComplete = true
+            }
+        }
+    }
+}
+
+#Preview {
+    CompleteOnboardingView(isComplete: .constant(false))
+}
