@@ -140,25 +140,25 @@ struct InsightsView: View {
                             .padding(.horizontal)
 
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                            StatCard(
+                            InsightsStatCard(
                                 icon: "figure.run",
                                 title: "Avg Wake Time",
                                 value: insightsManager.insightsData.averageWakeTime
                             )
 
-                            StatCard(
+                            InsightsStatCard(
                                 icon: "timer",
                                 title: "Avg Response",
                                 value: insightsManager.insightsData.averageResponseTime
                             )
 
-                            StatCard(
+                            InsightsStatCard(
                                 icon: "target",
                                 title: "Favorite Mission",
                                 value: insightsManager.insightsData.favoriteMission
                             )
 
-                            StatCard(
+                            InsightsStatCard(
                                 icon: "music.note",
                                 title: "Favorite Sound",
                                 value: insightsManager.insightsData.favoriteSound
@@ -647,8 +647,8 @@ struct BadgesEarnedCard: View {
     }
 }
 
-// Stat Card
-struct StatCard: View {
+// Insights Stat Card
+struct InsightsStatCard: View {
     @Environment(\.colorScheme) var colorScheme
     let icon: String
     let title: String

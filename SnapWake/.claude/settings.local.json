@@ -14,7 +14,12 @@
       "Bash(find /Users/jos/SnapWake/SnapWake/Views -name \"*.swift\" -exec grep -l \"Time Taken\\|timeTaken\" {} ;)",
       "Bash(swift package --package-path . show-dependencies)",
       "Bash(git remote add origin git@github.com:888jos/Cocorise.git)",
-      "Bash(git add .)"
+      "Bash(git add .)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nAdd RevenueCat integration, mission completion screen, and XP system\n\n- Created RevenueCatManager for subscription management\n- Added PaywallView and CustomerCenterView for subscriptions\n- Created MissionCompletionView with animated sun and XP display\n- Integrated XP awards in mission completion flow\n- Updated MissionExecutionView to show completion stats\n- Configured RevenueCat SDK in SnapWakeApp\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push -u origin main)",
+      "Bash(git remote set-url origin https://github.com/888jos/Cocorise.git)",
+      "Read(///**)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nFix build errors: RevenueCat, Mission init, and StatCard conflict\n\n- RevenueCatManager: Inherit from NSObject for PurchasesDelegate conformance\n- OptimizedFirebaseService: Remove all commented Firestore code to prevent compiler errors\n- MissionCompletionView: Fix Mission init with required gradient and category parameters\n- InsightsView: Rename StatCard to InsightsStatCard to avoid conflict with MissionCompletionView\n\nBuild now succeeds without errors.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

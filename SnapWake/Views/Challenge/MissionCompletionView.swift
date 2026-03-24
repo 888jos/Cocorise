@@ -230,6 +230,8 @@ struct StatCard: View {
             name: "Math Challenge",
             description: "Solve problems",
             icon: "number",
+            gradient: [.blue, .purple],
+            category: .mental,
             type: .math
         ),
         timeTaken: 87,

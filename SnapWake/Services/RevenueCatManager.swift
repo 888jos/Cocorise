@@ -9,7 +9,7 @@ import Foundation
 import RevenueCat
 
 @MainActor
-class RevenueCatManager: ObservableObject {
+class RevenueCatManager: NSObject, ObservableObject {
     static let shared = RevenueCatManager()
 
     @Published var customerInfo: CustomerInfo?
