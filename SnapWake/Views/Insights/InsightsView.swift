@@ -477,7 +477,6 @@ struct InsightsView: View {
             .padding(.vertical)
         }
     }
-}
 
 // Day Streak Card
 struct DayStreakCard: View {

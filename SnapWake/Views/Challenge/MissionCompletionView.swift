@@ -231,7 +231,7 @@ struct StatCard: View {
             description: "Solve problems",
             icon: "number",
             gradient: [.blue, .purple],
-            category: .mental,
+            category: .medium,
             type: .math
         ),
         timeTaken: 87,
