@@ -19,7 +19,8 @@ class RevenueCatManager: NSObject, ObservableObject {
     // Entitlement identifier from RevenueCat dashboard
     private let proEntitlementID = "Cocorise Pro"
 
-    private init() {
+    private override init() {
+        super.init()
         configure()
     }
 
